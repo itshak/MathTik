@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
-import { BottomNav } from '@/components/nav/BottomNav'
+import { FabMenu } from '@/components/nav/FabMenu'
+import { ThemeEffect } from '@/components/nav/ThemeEffect'
 
 export const metadata: Metadata = {
   title: 'MathTik',
@@ -12,10 +13,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <div className="min-h-screen pb-20 bg-[var(--bg)]">
+        <ThemeEffect />
+        <div className="min-h-screen bg-[var(--bg)]">
           {children}
         </div>
-        <BottomNav />
+        <FabMenu />
       </body>
     </html>
   )

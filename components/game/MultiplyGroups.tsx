@@ -6,7 +6,7 @@ import { Person } from '@/components/illustrations/Person'
 import { audio } from '@/lib/audio'
 import { DraggableItem, DroppableZone } from './dnd'
 
-export function MultiplyGroups({ a, b, onReady }: { a: number; b: number; onReady?: () => void }) {
+export function MultiplyGroups({ a, b, mistake, onReady }: { a: number; b: number; mistake?: boolean; onReady?: () => void }) {
   const total = a * b
   const [pool, setPool] = useState<number[]>(() => Array.from({ length: total }, (_, i) => i))
   const [groups, setGroups] = useState<number[][]>(() => Array.from({ length: a }, () => []))
@@ -59,27 +59,37 @@ export function MultiplyGroups({ a, b, onReady }: { a: number; b: number; onRead
     }
   }
 
+  // dynamic sizing: up to 10 per row in groups
+  const cols = Math.min(10, b)
+  const tile = useMemo(() => {
+    if (cols >= 10) return 32
+    if (cols >= 8) return 36
+    if (cols >= 6) return 44
+    return 56
+  }, [cols])
+  const appleSize = Math.max(20, Math.round(tile * 0.66))
+
   return (
     <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <div className="grid grid-cols-1 gap-3">
+      <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Groups */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {groups.map((g, i) => (
             <div key={i} className="border-2 border-dashed rounded-xl p-2">
               <div className="flex items-center gap-1 text-sm text-gray-500">
-                <Person size={36} /> <span className="text-base">×</span> <Apple size={36} />
+                <Person size={36} /> <span className="text-base">×</span> <Apple size={appleSize} />
               </div>
-              <DroppableZone id={`group-${i}`} className="mt-2 grid grid-cols-5 gap-2 min-h-[120px]">
+              <DroppableZone id={`group-${i}`} className="mt-2 grid gap-2 min-h-[120px]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
                 {g.map(id => (
                   <DraggableItem id={id} key={id}>
-                    <div className="w-14 h-14 rounded-xl grid place-items-center bg-white shadow-soft">
-                      <Apple size={36} />
+                    <div className="rounded-xl grid place-items-center bg-white shadow-soft" style={{ width: tile, height: tile }}>
+                      <Apple size={appleSize} />
                     </div>
                   </DraggableItem>
                 ))}
                 {/* pad placeholders visually */}
                 {Array.from({ length: Math.max(0, b - g.length) }).map((_, k) => (
-                  <div key={k} className="w-14 h-14 rounded-xl border border-gray-200" />
+                  <div key={k} className="rounded-xl border border-gray-200" style={{ width: tile, height: tile }} />
                 ))}
               </DroppableZone>
               <div className="text-[10px] mt-1 text-gray-400 font-bold">{g.length}/{b}</div>
@@ -93,8 +103,8 @@ export function MultiplyGroups({ a, b, onReady }: { a: number; b: number; onRead
           <DroppableZone id="pool" className="mt-2 flex flex-wrap gap-2 min-h-[120px]">
             {pool.map(id => (
               <DraggableItem id={id} key={id}>
-                <div className="w-14 h-14 rounded-xl grid place-items-center bg-white shadow-soft">
-                  <Apple size={36} />
+                <div className="rounded-xl grid place-items-center bg-white shadow-soft" style={{ width: tile, height: tile }}>
+                  <Apple size={appleSize} />
                 </div>
               </DraggableItem>
             ))}

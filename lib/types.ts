@@ -42,6 +42,8 @@ export type ProfileState = {
   totalAttempts: number
   soundOn: boolean
   unlocked: Record<string, boolean>
+  language?: 'en' | 'ru' | 'he'
+  theme?: 'default' | 'barbie'
 }
 
 export type GameState = {
@@ -49,4 +51,10 @@ export type GameState = {
   mastery: Record<string, Mastery>
   recentMistakes: string[] // queue of mastery keys
   lastOp?: Op
+  language?: 'en' | 'ru' | 'he'
+  theme?: 'default' | 'barbie'
+  sessionStartAt?: number
+  sessionAttempts: number
+  sessionCorrect: number
+  lastSession?: { durationMs: number; attempts: number; correct: number }
 }

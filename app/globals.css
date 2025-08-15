@@ -9,6 +9,8 @@
 html, body { height: 100%; }
 body {
   @apply bg-[var(--bg)] text-gray-800;
+  /* Prevent page scroll to improve DnD on touch */
+  overflow: hidden;
 }
 
 .container {
@@ -19,11 +21,22 @@ body {
 .btn {
   @apply rounded-xl px-4 py-3 font-extrabold shadow-soft active:scale-95 transition;
 }
-.btn-primary { @apply bg-brand text-white; }
+.btn-primary { 
+  @apply bg-brand text-white;
+  [data-theme="barbie"] & { background-color: #ec4899 !important; }
+}
 .btn-secondary { @apply bg-accent text-gray-900; }
 .btn-ghost { @apply border border-gray-200; }
 
 .card { @apply bg-white rounded-xl shadow-soft; }
+
+/* Fullscreen game surface helpers */
+.game-screen { @apply w-screen h-[100svh] overflow-hidden; }
+.game-area { @apply h-full touch-none; }
+
+/* Tiny progress bar */
+.progress { @apply w-full h-1.5 bg-gray-200 rounded-full overflow-hidden; }
+.progress > .bar { @apply h-full transition-all; }
 
 /* Bottom nav safe area */
 .bottom-safe { padding-bottom: env(safe-area-inset-bottom); }
@@ -31,3 +44,9 @@ body {
 /* Scrollbar (thin) */
 *::-webkit-scrollbar { height: 8px; width: 8px; }
 *::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 999px; }
+
+/* THEME OVERRIDES */
+[data-theme="barbie"] { --bg: #fff1f7; }
+[data-theme="barbie"] .bg-brand { background-color: #ec4899 !important; }
+[data-theme="barbie"] .text-brand { color: #ec4899 !important; }
+[data-theme="barbie"] .progress > .bar { background-color: #ec4899; }

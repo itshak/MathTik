@@ -23,10 +23,15 @@ const DEFAULT: GameState = {
     totalAttempts: 0,
     soundOn: true,
     unlocked: {},
+    language: 'en',
+    theme: 'default',
   },
   mastery: {},
   recentMistakes: [],
   lastOp: undefined,
+  sessionStartAt: undefined,
+  sessionAttempts: 0,
+  sessionCorrect: 0,
 }
 
 type Store = GameState & {
@@ -36,6 +41,10 @@ type Store = GameState & {
   nextChallenge: () => void
   answer: (value: number) => void
   toggleSound: () => void
+  startSession: () => void
+  endSession: () => void
+  setLanguage: (lang: 'en' | 'ru' | 'he') => void
+  setTheme: (theme: 'default' | 'barbie') => void
 }
 
 // Simple SRS intervals (seconds)
@@ -104,6 +113,14 @@ function updateMastery(m: Mastery | undefined, correct: boolean): Mastery {
 
 export const useGameStore = create<Store>()(persist((set, get) => ({
   ...DEFAULT,
+  startSession: () => set(s => s.sessionStartAt ? s : ({ sessionStartAt: Date.now(), sessionAttempts: 0, sessionCorrect: 0 })),
+  endSession: () => set(s => {
+    if (!s.sessionStartAt) return s
+    const durationMs = Date.now() - s.sessionStartAt
+    return { lastSession: { durationMs, attempts: s.sessionAttempts, correct: s.sessionCorrect }, sessionStartAt: undefined }
+  }),
+  setLanguage: (lang) => set(s => ({ profile: { ...s.profile, language: lang } })),
+  setTheme: (theme) => set(s => ({ profile: { ...s.profile, theme } })),
   nextChallenge: () => {
     const s = get()
     const max = clamp(s.profile.maxFactor, 2, 10)
@@ -169,7 +186,7 @@ export const useGameStore = create<Store>()(persist((set, get) => ({
 
     const mastery = { ...s.mastery, [updated.key]: updated }
 
-    set({ profile, mastery })
+    set({ profile, mastery, sessionAttempts: (s.sessionAttempts ?? 0) + 1, sessionCorrect: (s.sessionCorrect ?? 0) + (correct ? 1 : 0) })
 
     // immediately schedule next
     get().nextChallenge()

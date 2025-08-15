@@ -5,7 +5,7 @@ import { Apple } from '@/components/illustrations/Apple'
 import { audio } from '@/lib/audio'
 import { DraggableItem, DroppableZone } from './dnd'
 
-export function ArrayBuilder({ a, b, onReady }: { a: number; b: number; onReady?: () => void }) {
+export function ArrayBuilder({ a, b, mistake, onReady }: { a: number; b: number; mistake?: boolean; onReady?: () => void }) {
   const total = a * b
   const [pool, setPool] = useState<number[]>(() => Array.from({ length: total }, (_, i) => i))
   const [cells, setCells] = useState<(number|null)[]>(() => Array.from({ length: total }, () => null))
@@ -52,20 +52,29 @@ export function ArrayBuilder({ a, b, onReady }: { a: number; b: number; onReady?
   }
 
   const gridStyle: CSSProperties = { gridTemplateColumns: `repeat(${b}, minmax(0,1fr))` }
+  // dynamic sizing based on number of columns (cap decision by visual density)
+  const cols = Math.min(10, b)
+  const tile = useMemo(() => {
+    if (cols >= 10) return 32
+    if (cols >= 8) return 36
+    if (cols >= 6) return 44
+    return 56
+  }, [cols])
+  const appleSize = Math.max(20, Math.round(tile * 0.66))
 
   return (
     <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
-      <div className="grid grid-cols-1 gap-3">
+      <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Array grid */}
         <div className="border-2 border-dashed rounded-xl p-3">
           <DroppableZone id="array" className="grid gap-2"/>
           <div className="grid gap-2 mt-1" style={gridStyle}>
             {cells.map((c, i) => (
-              <DroppableZone key={i} id={`cell-${i}`} className="w-14 h-14 rounded-xl border border-gray-200 grid place-items-center">
+              <DroppableZone key={i} id={`cell-${i}`} className="rounded-xl border border-gray-200 grid place-items-center" style={{ width: tile, height: tile }}>
                 {c !== null && (
                   <DraggableItem id={c}>
-                    <div className="w-14 h-14 rounded-xl grid place-items-center bg-white shadow-soft">
-                      <Apple size={36} />
+                    <div className="rounded-xl grid place-items-center bg-white shadow-soft" style={{ width: tile, height: tile }}>
+                      <Apple size={appleSize} />
                     </div>
                   </DraggableItem>
                 )}
@@ -80,11 +89,12 @@ export function ArrayBuilder({ a, b, onReady }: { a: number; b: number; onReady?
 
         {/* Pool */}
         <div className="border rounded-xl p-3">
+          <div className="flex items-center gap-2 text-gray-500 text-xs"><span>Pool</span></div>
           <DroppableZone id="pool" className="mt-2 flex flex-wrap gap-2 min-h-[120px]">
             {pool.map(id => (
               <DraggableItem id={id} key={id}>
-                <div className="w-14 h-14 rounded-xl grid place-items-center bg-white shadow-soft">
-                  <Apple size={36} />
+                <div className="rounded-xl grid place-items-center bg-white shadow-soft" style={{ width: tile, height: tile }}>
+                  <Apple size={appleSize} />
                 </div>
               </DraggableItem>
             ))}

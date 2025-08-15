@@ -13,10 +13,10 @@ export function DraggableItem({ id, children }: { id: string | number; children:
   )
 }
 
-export function DroppableZone({ id, className, children }: { id: string; className?: string; children?: ReactNode }) {
+export function DroppableZone({ id, className, style, children }: { id: string; className?: string; style?: CSSProperties; children?: ReactNode }) {
   const { isOver, setNodeRef } = useDroppable({ id })
   return (
-    <div ref={setNodeRef} className={clsx(className, isOver && 'ring-2 ring-brand/50')}>
+    <div ref={setNodeRef} className={clsx(className, isOver && 'ring-2 ring-brand/50')} style={style}>
       {children}
     </div>
   )
