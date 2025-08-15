@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import type { Route } from 'next'
 import { useGameStore } from '@/lib/store'
+import { useI18n } from '@/lib/i18n'
 
 const LANGS: { code: 'en'|'ru'|'he'; label: string; flag: string }[] = [
   { code: 'en', label: 'English', flag: '🇬🇧' },
@@ -18,16 +19,17 @@ export default function SettingsPage() {
   const theme = useGameStore(s => s.profile.theme || 'default')
   const setLanguage = useGameStore(s => s.setLanguage)
   const setTheme = useGameStore(s => s.setTheme)
+  const t = useI18n()
 
   return (
     <main className="container py-8">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold">Settings</h1>
-        <Link href={'/menu' as Route} className="btn btn-ghost">⬅ Menu</Link>
+        <h1 className="text-2xl font-extrabold">{t('settings')}</h1>
+        <Link href={'/menu' as Route} className="btn btn-ghost">⬅ {t('menu')}</Link>
       </header>
 
       <section className="card p-4 mt-6">
-        <h2 className="font-bold mb-2">Language</h2>
+        <h2 className="font-bold mb-2">{t('language')}</h2>
         <div className="grid grid-cols-3 gap-2">
           {LANGS.map(l => (
             <button key={l.code} onClick={() => setLanguage(l.code)} className={`btn ${lang===l.code?'bg-brand text-white':'btn-ghost'}`}>
@@ -38,7 +40,7 @@ export default function SettingsPage() {
       </section>
 
       <section className="card p-4 mt-6">
-        <h2 className="font-bold mb-2">Theme</h2>
+        <h2 className="font-bold mb-2">{t('theme')}</h2>
         <div className="grid grid-cols-2 gap-2">
           {THEMES.map(t => (
             <button key={t.id} onClick={() => setTheme(t.id)} className={`btn ${theme===t.id?'bg-brand text-white':'btn-ghost'}`}>

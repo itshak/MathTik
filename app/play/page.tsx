@@ -1,5 +1,6 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useGameStore } from '@/lib/store'
 import { AnswerTiles } from '@/components/game/AnswerTiles'
 import { NumberWheel } from '@/components/game/NumberWheel'
@@ -20,33 +21,53 @@ export default function PlayPage() {
   useEffect(() => { audio.setEnabled(s.profile.soundOn) }, [s.profile.soundOn])
 
   const [lastMistake, setLastMistake] = useState(false)
+  const [mistakeCount, setMistakeCount] = useState(0)
+  const [awaitingAutoSolve, setAwaitingAutoSolve] = useState(false)
+  const [pendingAnswer, setPendingAnswer] = useState<number | null>(null)
 
   const Game = useMemo(() => {
     if (!ch) return null
     if (ch.game === 'multiply-groups') return (
-      <MultiplyGroups key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} />
+      <MultiplyGroups key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} mistakes={mistakeCount} onReady={onGameReady} />
     )
     if (ch.game === 'division-dealer') return (
-      <DivisionDealer key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} />
+      <DivisionDealer key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} onReady={onGameReady} mistakes={mistakeCount} />
     )
     if (ch.game === 'array-builder') return (
-      <ArrayBuilder key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} />
+      <ArrayBuilder key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} onReady={onGameReady} mistakes={mistakeCount} />
     )
     return null
-  }, [ch, lastMistake])
+  }, [ch, lastMistake, mistakeCount])
 
   if (!ch) return null
+
+  useEffect(() => { setMistakeCount(0); setLastMistake(false) }, [ch?.id])
 
   function onAnswer(val: number) {
     if (!ch) return
     const correct = val === ch.answer
     if (correct) audio.success(); else audio.error()
-    setLastMistake(!correct)
     if (!correct) {
-      // briefly mark mistake for the next game to react
-      setTimeout(() => setLastMistake(false), 1200)
+      // trigger auto-solve sequence in game and delay next challenge until onReady
+      setLastMistake(true)
+      setMistakeCount(c => c + 1)
+      setAwaitingAutoSolve(true)
+      setPendingAnswer(val)
+      return
     }
+    // correct: proceed immediately
+    setLastMistake(false)
     s.answer(val)
+  }
+
+  function onGameReady() {
+    // Called by game when its auto-solve animation is complete
+    if (awaitingAutoSolve && pendingAnswer !== null) {
+      s.answer(pendingAnswer)
+    }
+    setAwaitingAutoSolve(false)
+    setPendingAnswer(null)
+    setLastMistake(false)
   }
 
   const targetPerLevel = 10
@@ -56,12 +77,14 @@ export default function PlayPage() {
     <main className="game-screen flex flex-col">
       <div className="px-4 pt-4">
         <header className="flex items-center justify-between">
+          {/* Top-left: Menu icon */}
+          <Link href="/menu" className="text-xl px-3 py-1 rounded-lg border bg-white shadow-soft active:scale-95 select-none">☰</Link>
+          {/* Top-right: Level + stats */}
           <div className="flex items-center gap-2">
-            <span className="text-xs bg-white px-2 py-1 rounded-lg border">Lvl {s.profile.level}</span>
+            <div className="text-xs bg-white px-2 py-1 rounded-lg border flex items-center gap-1">🏅 <span className="font-bold">{s.profile.level}</span></div>
             <span className="text-xs bg-white px-2 py-1 rounded-lg border">⭐ {s.profile.points}</span>
             <button onClick={() => s.toggleSound()} className={`text-xs px-2 py-1 rounded-lg border ${s.profile.soundOn ? 'bg-green-50' : 'bg-red-50'}`}>{s.profile.soundOn ? '🔊' : '🔇'}</button>
           </div>
-          <div className="text-sm font-extrabold">{ch.a} {ch.op === 'mul' ? '×' : '÷'} {ch.b}</div>
         </header>
         <div className="progress mt-2">
           <div className="bar bg-brand" style={{ width: `${progressPct}%` }} />
@@ -69,16 +92,21 @@ export default function PlayPage() {
       </div>
 
       <section className="flex-1 overflow-hidden px-4 py-2">
-        <div className="card h-full p-4 game-area overflow-auto">
-          {Game}
+        <div className="card h-full p-4 game-area overflow-auto flex flex-col items-center">
+          <div className="text-center mb-4 mt-2">
+            <div className="text-5xl sm:text-6xl font-black tracking-tight">{ch.a} {ch.op === 'mul' ? '×' : '÷'} {ch.b}</div>
+          </div>
+          <div className="w-full max-w-4xl mx-auto">
+            {Game}
+          </div>
         </div>
       </section>
 
       <section className="px-4 pb-5">
         {ch.input === 'mc' ? (
-          <AnswerTiles values={ch.choices} correct={ch.answer} onSelect={onAnswer} />
+          <AnswerTiles values={ch.choices} correct={ch.answer} onSelect={onAnswer} highlightCorrect={mistakeCount >= 3} disabled={awaitingAutoSolve} />
         ) : (
-          <NumberWheel min={0} max={100} onPick={onAnswer} />
+          <NumberWheel min={0} max={100} onPick={onAnswer} disabled={awaitingAutoSolve} />
         )}
       </section>
     </main>

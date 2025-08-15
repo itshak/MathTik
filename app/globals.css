@@ -50,3 +50,23 @@ body {
 [data-theme="barbie"] .bg-brand { background-color: #ec4899 !important; }
 [data-theme="barbie"] .text-brand { color: #ec4899 !important; }
 [data-theme="barbie"] .progress > .bar { background-color: #ec4899; }
+
+/* Animations */
+@keyframes pump {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+.animate-pump { animation: pump 900ms ease-in-out 0s 3; }
+
+@keyframes pointerPulse {
+  0%, 100% { transform: translateX(0); opacity: 0.9; }
+  50% { transform: translateX(4px); opacity: 1; }
+}
+.animate-pointer { animation: pointerPulse 1.2s ease-in-out infinite; display: inline-block; }
+
+@keyframes pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.animate-pop { animation: pop 260ms ease-out; }

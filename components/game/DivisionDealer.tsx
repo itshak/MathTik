@@ -5,11 +5,15 @@ import { Apple } from '@/components/illustrations/Apple'
 import { Person } from '@/components/illustrations/Person'
 import { audio } from '@/lib/audio'
 import { DraggableItem, DroppableZone } from './dnd'
+import { useI18n } from '@/lib/i18n'
 
-export function DivisionDealer({ a, b, mistake, onReady }: { a: number; b: number; mistake?: boolean; onReady?: () => void }) {
+export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number; b: number; mistake?: boolean; onReady?: () => void; mistakes?: number }) {
+  const t = useI18n()
   const q = Math.floor(a / b)
   const [pool, setPool] = useState<number[]>(() => Array.from({ length: a }, (_, i) => i))
   const [friends, setFriends] = useState<number[][]>(() => Array.from({ length: b }, () => []))
+  const [autoSolving, setAutoSolving] = useState(false)
+  const [lastAdded, setLastAdded] = useState<number | null>(null)
 
   useEffect(() => { setPool(Array.from({ length: a }, (_, i) => i)); setFriends(Array.from({ length: b }, () => [])) }, [a,b])
 
@@ -17,6 +21,26 @@ export function DivisionDealer({ a, b, mistake, onReady }: { a: number; b: numbe
     const done = pool.length === 0 && friends.every(f => f.length === q)
     if (done) onReady?.()
   }, [pool, friends, q, onReady])
+
+  // Auto-solve: distribute remaining pool apples to friends until each has q
+  useEffect(() => {
+    if (!mistake || autoSolving) return
+    setAutoSolving(true)
+    const iv = setInterval(() => {
+      // find next friend needing an apple
+      const tgt = friends.findIndex(f => f.length < q)
+      if (tgt === -1 || pool.length === 0) {
+        clearInterval(iv)
+        setAutoSolving(false)
+        return
+      }
+      const id = pool[0]
+      setPool(prev => prev.slice(1))
+      setFriends(prev => prev.map((f, idx) => idx === tgt ? [...f, id] : f))
+      setLastAdded(id)
+    }, 180)
+    return () => clearInterval(iv)
+  }, [mistake, autoSolving, friends, pool.length, q])
 
   function onDragStart() { audio.drag() }
 
@@ -72,11 +96,16 @@ export function DivisionDealer({ a, b, mistake, onReady }: { a: number; b: numbe
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Pool (no text) */}
         <div className="border rounded-xl p-3">
-          <div className="flex items-center gap-1 text-gray-400 text-xs"><span className="text-xl">🗃️</span></div>
+          <div className="flex items-center gap-2 text-gray-500 text-xs">
+            <span className="text-xl">🗃️</span>
+            {(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) && (
+              <span className="ml-auto text-[11px] text-gray-400 flex items-center gap-1"><span className="animate-pointer">👉</span>{t('countTogether')} {a - pool.length}/{a}</span>
+            )}
+          </div>
           <DroppableZone id="pool" className="mt-2 flex flex-wrap gap-2 min-h-[120px]">
             {pool.map(id => (
               <DraggableItem id={id} key={id}>
-                <div className="rounded-xl grid place-items-center bg-white shadow-soft" style={{ width: tile, height: tile }}>
+                <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''}`} style={{ width: tile, height: tile }}>
                   <Apple size={appleSize} />
                 </div>
               </DraggableItem>
@@ -85,7 +114,7 @@ export function DivisionDealer({ a, b, mistake, onReady }: { a: number; b: numbe
         </div>
 
         {/* Friends */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 ${autoSolving ? 'pointer-events-none opacity-95' : ''}`}>
           {friends.map((f, i) => (
             <div key={i} className="border-2 border-dashed rounded-xl p-2">
               <div className="flex items-center gap-1 text-sm text-gray-500">
@@ -94,7 +123,7 @@ export function DivisionDealer({ a, b, mistake, onReady }: { a: number; b: numbe
               <DroppableZone id={`friend-${i}`} className="mt-2 flex flex-wrap gap-2 min-h-[120px]">
                 {f.map(id => (
                   <DraggableItem id={id} key={id}>
-                    <div className="rounded-xl grid place-items-center bg-white shadow-soft" style={{ width: tile, height: tile }}>
+                    <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''}`} style={{ width: tile, height: tile }}>
                       <Apple size={appleSize} />
                     </div>
                   </DraggableItem>
