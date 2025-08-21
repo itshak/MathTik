@@ -86,10 +86,10 @@ export default function PlayPage() {
         </div>
       </div>
 
-      <section className="flex-1 overflow-hidden px-4 py-2">
-        <div className="card h-full p-4 game-area overflow-auto flex flex-col items-center">
+      <section className="flex-1 overflow-hidden px-4 py-1">
+        <div className="card h-full p-3 game-area overflow-hidden flex flex-col items-center">
           <div className="text-center mb-4 mt-2">
-            <div className="text-5xl sm:text-6xl font-black tracking-tight">{ch.a} {ch.op === 'mul' ? '×' : '÷'} {ch.b}</div>
+            <div className="text-4xl sm:text-5xl font-black tracking-tight">{ch.a} {ch.op === 'mul' ? '×' : '÷'} {ch.b}</div>
           </div>
           <div className="w-full max-w-4xl mx-auto">
             {Game}
@@ -99,9 +99,9 @@ export default function PlayPage() {
 
       <section className="px-4 pb-5">
         {ch.input === 'mc' ? (
-          <AnswerTiles values={ch.choices} correct={ch.answer} onSelect={onAnswer} highlightCorrect={mistakeCount >= 3} disabled={awaitingAutoSolve} />
+          <AnswerTiles values={ch.choices} correct={ch.answer} onSelect={onAnswer} highlightCorrect={mistakeCount >= 3} />
         ) : (
-          <NumberWheel min={0} max={100} onPick={onAnswer} disabled={awaitingAutoSolve} />
+          <NumberWheel min={0} max={100} onPick={onAnswer} />
         )}
       </section>
     </main>

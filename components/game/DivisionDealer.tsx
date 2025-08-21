@@ -16,6 +16,7 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
   const [lastAdded, setLastAdded] = useState<number | null>(null)
   const [countIdx, setCountIdx] = useState<number>(-1) // for animated counting across apples
   const autoTimer = useRef<number | null>(null)
+  const autoRunId = useRef(0)
   const countTimer = useRef<number | null>(null)
   const countPos = useRef<number>(-1)
 
@@ -26,45 +27,48 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
     if (done) onReady?.()
   }, [pool, friends, q, onReady])
 
-  // Auto-solve: distribute remaining pool apples to friends until each has q (stable across re-renders)
+  // Auto-solve: distribute remaining pool apples to friends until each has q (deterministic sequence)
+  // Important: depend ONLY on `mistake` so re-renders from state changes don't clear the timer mid-run.
   useEffect(() => {
-    if (!mistake || autoSolving) return
+    if (!mistake) return
     setAutoSolving(true)
 
-    const step = () => {
-      let didMove = false
-      setPool(prevPool => {
-        if (prevPool.length === 0) return prevPool
-        const id = prevPool[0]
-        setFriends(prevFriends => {
-          const tgt = prevFriends.findIndex(f => f.length < q)
-          if (tgt === -1) return prevFriends
-          didMove = true
-          setLastAdded(id)
-          return prevFriends.map((f, idx) => idx === tgt ? [...f, id] : f)
-        })
-        return prevPool.slice(1)
-      })
+    // Build the exact target sequence based on current deficit per friend
+    const needs = friends.map(f => Math.max(0, q - f.length))
+    const seq: number[] = []
+    needs.forEach((n, idx) => { for (let k = 0; k < n; k++) seq.push(idx) })
+    // Stable queue of ids to move (only as many as needed)
+    const idsQueue = pool.slice(0, seq.length)
+    let i = 0
+    autoRunId.current += 1
+    const thisRun = autoRunId.current
 
-      // schedule next step or finish
-      autoTimer.current = window.setTimeout(() => {
-        const done = pool.length === 0 && friends.every(f => f.length === q)
-        if (done || !didMove) {
-          setAutoSolving(false)
-          autoTimer.current && clearTimeout(autoTimer.current)
-          autoTimer.current = null
-          // For first mistake, finish now; for subsequent mistakes, counting animation will call onReady
-          if (!mistakes || mistakes < 2) onReady?.()
-        } else {
-          step()
-        }
-      }, 180)
+    const step = () => {
+      if (thisRun !== autoRunId.current) return
+      if (i >= seq.length) {
+        setAutoSolving(false)
+        // For first mistake, finish now; for subsequent mistakes, counting animation will call onReady
+        if (!mistakes || mistakes < 2) onReady?.()
+        return
+      }
+      const tgt = seq[i++]
+      const id = idsQueue[i-1]
+      // Remove this id from pool and append to target, but never exceed capacity
+      setPool(prev => prev.includes(id) ? prev.filter(x => x !== id) : prev)
+      setFriends(prevF => prevF.map((f, idx) => {
+        if (idx !== tgt) return f
+        if (f.length >= q) return f
+        // Avoid accidental duplication of the same id
+        if (f.includes(id)) return f
+        return [...f, id]
+      }))
+      setLastAdded(id)
+      autoTimer.current = window.setTimeout(step, 180)
     }
 
     step()
-
-    return () => { if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null } }
-  }, [mistake, autoSolving, q, onReady, pool.length, friends, mistakes])
+    return () => { autoRunId.current += 1; if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null } }
+  }, [mistake])
 
   // Counting guidance animation for mistakes >= 2 (stable across re-renders)
   useEffect(() => {
@@ -135,12 +139,13 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
   // dynamic sizing: based on per-friend capacity q (cap rows to ~10 visually)
   const cols = Math.min(10, q)
   const tile = useMemo(() => {
-    if (cols >= 10) return 32
-    if (cols >= 8) return 36
-    if (cols >= 6) return 44
-    return 56
+    // slightly smaller to ensure entire board fits small viewports
+    if (cols <= 3) return 84
+    if (cols <= 5) return 60
+    if (cols <= 8) return 48
+    return 36
   }, [cols])
-  const appleSize = Math.max(20, Math.round(tile * 0.66))
+  const appleSize = Math.max(24, Math.round(tile * 0.75))
 
   return (
     <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
@@ -150,10 +155,10 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span className="text-xl">🗃️</span>
             {(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) && (
-              <span className="ml-auto text-[11px] text-gray-400 flex items-center gap-1"><span className="animate-pointer">👉</span>{t('countTogether')} {a - pool.length}/{a}</span>
+              <span className="ml-auto text-[11px] text-gray-400">{t('countTogether')} {a - pool.length}/{a}</span>
             )}
           </div>
-          <DroppableZone id="pool" className={`mt-2 flex flex-wrap gap-2 min-h-[120px] ${typeof mistakes === 'number' && mistakes >= 1 ? 'pointer-events-none opacity-95' : ''}`}>
+          <DroppableZone id="pool" className={`mt-2 flex flex-wrap gap-2 ${typeof mistakes === 'number' && mistakes >= 1 ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: tile }}>
             {pool.map(id => (
               <DraggableItem id={id} key={id}>
                 <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''}`} style={{ width: tile, height: tile }}>
@@ -169,22 +174,26 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
           {friends.map((f, i) => (
             <div key={i} className="border-2 border-dashed rounded-xl p-2 relative">
               <div className="flex items-center gap-1 text-sm text-gray-500">
-                <Person size={36} />
+                <Person size={Math.round(tile * 0.9)} />
               </div>
-              <DroppableZone id={`friend-${i}`} className="mt-2 flex flex-wrap gap-2 min-h-[120px]">
+              <DroppableZone id={`friend-${i}`} className="mt-2 flex flex-wrap gap-2" style={{ minHeight: tile }}>
                 {f.map((id, j) => (
                   <DraggableItem id={id} key={id}>
                     <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative`} style={{ width: tile, height: tile }}>
                       <Apple size={appleSize} />
                       {/* Counting overlays */}
-                      {typeof mistakes === 'number' && mistakes >= 2 && i === 0 && (
-                        <span className="absolute top-0.5 left-0.5 text-[10px] font-black text-brand">
+                      {typeof mistakes === 'number' && ((mistakes >= 3) || (mistakes >= 2 && i === 0)) && (
+                        <span className="absolute inset-0 grid place-items-center text-xs sm:text-sm font-black text-brand">
                           {mistakes >= 3 ? String(j + 1) : (j < countIdx ? String(j + 1) : (j === q - 1 ? '?' : ''))}
                         </span>
                       )}
                       {/* Moving pointer attached to current apple on second mistake */}
                       {typeof mistakes === 'number' && mistakes === 2 && i === 0 && j === Math.min(countIdx, q - 1) && (
-                        <span className="absolute -top-2 -right-2 text-base animate-pointer">👉</span>
+                        <span className="absolute inset-0 grid place-items-center pointer-events-none text-2xl">👉</span>
+                      )}
+                      {/* First mistake: static pointer on first apple of first friend */}
+                      {typeof mistakes === 'number' && mistakes === 1 && i === 0 && j === 0 && (
+                        <span className="absolute inset-0 grid place-items-center pointer-events-none text-2xl">👉</span>
                       )}
                     </div>
                   </DraggableItem>
@@ -194,10 +203,6 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
                 ))}
               </DroppableZone>
               <div className="text-[10px] mt-1 text-gray-400 font-bold">{f.length}/{q}</div>
-              {/* First mistake: static pointer to guide where to count */}
-              {i === 0 && typeof mistakes === 'number' && mistakes === 1 && (
-                <div className="absolute -top-2 -right-2 text-base animate-pointer">👉</div>
-              )}
             </div>
           ))}
         </div>

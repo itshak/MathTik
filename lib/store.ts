@@ -74,7 +74,8 @@ function makeDiv(max: number) {
 }
 
 function pickGame(op: Op): Challenge['game'] {
-  return op === 'mul' ? (Math.random() < 0.5 ? 'multiply-groups' : 'array-builder') : 'division-dealer'
+  // Temporarily disable ArrayBuilder until redesign; always use multiply-groups for multiplication
+  return op === 'mul' ? 'multiply-groups' : 'division-dealer'
 }
 
 function buildChallenge(max: number, lastOp?: Op, review?: {op: Op, a: number, b: number}): Challenge {

@@ -1,6 +1,6 @@
 "use client"
 import { DndContext, DragEndEvent } from '@dnd-kit/core'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Apple } from '@/components/illustrations/Apple'
 import { Person } from '@/components/illustrations/Person'
 import { audio } from '@/lib/audio'
@@ -10,52 +10,100 @@ import { useI18n } from '@/lib/i18n'
 export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number; b: number; mistake?: boolean; onReady?: () => void; mistakes?: number }) {
   const t = useI18n()
   const total = a * b
-  // Start with apples held by people; pool is empty
-  const [pool, setPool] = useState<number[]>([])
-  const [groups, setGroups] = useState<number[][]>(() =>
-    Array.from({ length: a }, (_, gi) => Array.from({ length: b }, (_, j) => gi * b + j))
-  )
+  // Start with apples distributed to groups; pool empty (avoid first-frame flicker)
+  const [pool, setPool] = useState<number[]>(() => [])
+  const [groups, setGroups] = useState<number[][]>(() => {
+    const ids = Array.from({ length: total }, (_, i) => i)
+    const g: number[][] = Array.from({ length: a }, () => [])
+    let p = 0
+    for (let gi = 0; gi < a; gi++) {
+      for (let k = 0; k < b; k++) g[gi].push(ids[p++])
+    }
+    return g
+  })
   const [autoSolving, setAutoSolving] = useState(false)
-  const [movedCount, setMovedCount] = useState(0)
   const [lastAdded, setLastAdded] = useState<number | null>(null)
+  const [countIdx, setCountIdx] = useState(-1)
+  const autoTimer = useRef<number | null>(null)
+  const autoRunId = useRef(0)
+  const countTimer = useRef<number | null>(null)
+  const countPos = useRef(-1)
 
   useEffect(() => {
+    // Start with apples distributed to groups (a groups, b each); pool is empty
+    const ids = Array.from({ length: total }, (_, i) => i)
+    const g: number[][] = Array.from({ length: a }, () => [])
+    let p = 0
+    for (let gi = 0; gi < a; gi++) {
+      for (let k = 0; k < b; k++) {
+        g[gi].push(ids[p++])
+      }
+    }
+    setGroups(g)
     setPool([])
-    setGroups(Array.from({ length: a }, (_, gi) => Array.from({ length: b }, (_, j) => gi * b + j)))
-  }, [a, b])
+  }, [a, b, total])
 
-  // Ready when all apples are moved to the pool
+  // Ready when all apples are in the pool (after user or auto-solve finishes)
   useEffect(() => {
-    if (pool.length === total) onReady?.()
+    const done = pool.length === total
+    if (done) onReady?.()
   }, [pool.length, total, onReady])
 
-  // Auto-solve: move remaining apples to pool one by one when mistake occurs
+  // Auto-solve: move all apples from groups into pool (deterministic sequence)
+  // Depend only on `mistake` so re-renders from state changes don't cancel the timer mid-run.
   useEffect(() => {
-    if (!mistake || autoSolving) return
+    if (!mistake) return
     setAutoSolving(true)
-    // Build a flat list of remaining ids not in pool
-    const seq: number[] = []
-    groups.forEach(g => g.forEach(id => seq.push(id)))
+    // Build stable queue of ids to move from current groups to pool
+    const idsQueue: number[] = []
+    groups.forEach(g => g.forEach(id => idsQueue.push(id)))
     let i = 0
-    const iv = setInterval(() => {
-      if (i >= seq.length) {
-        clearInterval(iv)
+    autoRunId.current += 1
+    const thisRun = autoRunId.current
+    const step = () => {
+      if (thisRun !== autoRunId.current) return
+      if (i >= idsQueue.length) {
         setAutoSolving(false)
+        if (!mistakes || mistakes < 2) onReady?.()
         return
       }
-      const id = seq[i++]
-      // remove from its current group and push to pool
-      setGroups(prev => prev.map(g => g.includes(id) ? g.filter(x => x !== id) : g))
-      setPool(prev => [...prev, id])
+      const id = idsQueue[i++]
+      // Remove the id from any group; append to pool if not present
+      setGroups(prevG => prevG.map(g => g.includes(id) ? g.filter(x => x !== id) : g))
+      setPool(prev => prev.includes(id) ? prev : [...prev, id])
       setLastAdded(id)
-      setMovedCount(c => c + 1)
-    }, 180)
-    return () => clearInterval(iv)
-  }, [mistake, autoSolving, groups])
+      autoTimer.current = window.setTimeout(step, 180)
+    }
+    step()
+    return () => { autoRunId.current += 1; if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null } }
+  }, [mistake])
+
+  // Counting guidance for mistakes >= 2: count apples in the POOL; on 3rd mistake, number all apples in the pool
+  useEffect(() => {
+    if (countTimer.current) { clearTimeout(countTimer.current); countTimer.current = null }
+    countPos.current = -1
+    if (autoSolving || !mistakes) { setCountIdx(-1); return }
+    if (mistakes >= 3) { setCountIdx(total - 1); onReady?.(); return }
+    if (mistakes >= 2) {
+      const tick = () => {
+        countPos.current = Math.min(total - 1, countPos.current + 1)
+        setCountIdx(countPos.current)
+        if (countPos.current < total - 1) {
+          countTimer.current = window.setTimeout(tick, 600)
+        } else {
+          onReady?.()
+        }
+      }
+      tick()
+      return () => { if (countTimer.current) { clearTimeout(countTimer.current); countTimer.current = null } }
+    }
+    setCountIdx(-1)
+  }, [mistakes, total, autoSolving, onReady])
 
   function onDragStart() { audio.drag() }
 
   function onDragEnd(ev: DragEndEvent) {
+    if (typeof mistakes === 'number' && mistakes >= 1) return
     const id = Number(ev.active.id)
     const overId = ev.over?.id as string | undefined
     if (!overId) return
@@ -94,30 +142,63 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
     }
   }
 
-  // dynamic sizing: up to 10 per row in groups
+  // dynamic sizing: slightly smaller to improve fit in viewport
   const cols = Math.min(10, b)
   const tile = useMemo(() => {
-    if (cols >= 10) return 32
-    if (cols >= 8) return 36
-    if (cols >= 6) return 44
-    return 56
+    if (cols <= 3) return 84
+    if (cols <= 5) return 60
+    if (cols <= 8) return 48
+    return 36
   }, [cols])
-  const appleSize = Math.max(20, Math.round(tile * 0.66))
+  const appleSize = Math.max(24, Math.round(tile * 0.75))
 
   return (
     <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
+        {/* Pool (placed first to remain visible even on small heights) */}
+        <div className="border rounded-xl p-3">
+          <div className="flex items-center gap-2 text-gray-500 text-xs">
+            <span>🧺</span><span>{t('pool')}</span>
+            {(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) && (
+              <span className="ml-auto text-[11px] text-gray-400">{t('countTogether')} {pool.length}/{total}</span>
+            )}
+          </div>
+          <DroppableZone id="pool" className={`mt-2 flex flex-wrap gap-2 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: tile }}>
+            {pool.map((id, j) => (
+              <DraggableItem id={id} key={id}>
+                <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative`} style={{ width: tile, height: tile }}>
+                  <Apple size={appleSize} />
+                  {typeof mistakes === 'number' && (
+                    mistakes >= 3 ? (
+                      <span className="absolute inset-0 grid place-items-center text-xs sm:text-sm font-black text-brand">{j + 1}</span>
+                    ) : mistakes >= 2 ? (
+                      <>
+                        <span className="absolute inset-0 grid place-items-center text-xs sm:text-sm font-black text-brand">{j < countIdx ? String(j + 1) : (j === total - 1 ? '?' : '')}</span>
+                        {j === Math.min(countIdx, total - 1) && (
+                          <span className="absolute inset-0 grid place-items-center pointer-events-none text-2xl">👉</span>
+                        )}
+                      </>
+                    ) : (mistakes === 1 && j === 0) ? (
+                      <span className="absolute inset-0 grid place-items-center pointer-events-none text-2xl">👉</span>
+                    ) : null
+                  )}
+                </div>
+              </DraggableItem>
+            ))}
+          </DroppableZone>
+        </div>
+
         {/* Groups */}
-        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 ${autoSolving ? 'pointer-events-none opacity-95' : ''}`}>
+        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`}>
           {groups.map((g, i) => (
-            <div key={i} className="border-2 border-dashed rounded-xl p-2">
+            <div key={i} className="border-2 border-dashed rounded-xl p-2 relative">
               <div className="flex items-center gap-1 text-sm text-gray-500">
-                <Person size={36} /> <span className="text-base">×</span> <Apple size={appleSize} />
+                <Person size={Math.round(tile * 0.9)} /> <span className="text-base">×</span> <Apple size={appleSize} />
               </div>
-              <DroppableZone id={`group-${i}`} className="mt-2 grid gap-2 min-h-[120px]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))` }}>
-                {g.map(id => (
+              <DroppableZone id={`group-${i}`} className="mt-2 grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))`, minHeight: tile }}>
+                {g.map((id, j) => (
                   <DraggableItem id={id} key={id}>
-                    <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''}`} style={{ width: tile, height: tile }}>
+                    <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative`} style={{ width: tile, height: tile }}>
                       <Apple size={appleSize} />
                     </div>
                   </DraggableItem>
@@ -130,25 +211,6 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
               <div className="text-[10px] mt-1 text-gray-400 font-bold">{g.length}/{b}</div>
             </div>
           ))}
-        </div>
-
-        {/* Pool */}
-        <div className="border rounded-xl p-3">
-          <div className="flex items-center gap-2 text-gray-500 text-xs">
-            <span>🧺</span><span>{t('pool')}</span>
-            {(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) && (
-              <span className="ml-auto text-[11px] text-gray-400 flex items-center gap-1"><span className="animate-pointer">👉</span>{t('countTogether')} {movedCount}/{total}</span>
-            )}
-          </div>
-          <DroppableZone id="pool" className={`mt-2 flex flex-wrap gap-2 min-h-[120px] ${mistakes && mistakes >= 1 ? 'ring-2 ring-brand/40 rounded-xl p-2 -m-2' : ''}`}>
-            {pool.map(id => (
-              <DraggableItem id={id} key={id}>
-                <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''}`} style={{ width: tile, height: tile }}>
-                  <Apple size={appleSize} />
-                </div>
-              </DraggableItem>
-            ))}
-          </DroppableZone>
         </div>
       </div>
     </DndContext>
