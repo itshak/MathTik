@@ -23,7 +23,6 @@ export default function PlayPage() {
   const [lastMistake, setLastMistake] = useState(false)
   const [mistakeCount, setMistakeCount] = useState(0)
   const [awaitingAutoSolve, setAwaitingAutoSolve] = useState(false)
-  const [pendingAnswer, setPendingAnswer] = useState<number | null>(null)
 
   const Game = useMemo(() => {
     if (!ch) return null
@@ -52,7 +51,6 @@ export default function PlayPage() {
       setLastMistake(true)
       setMistakeCount(c => c + 1)
       setAwaitingAutoSolve(true)
-      setPendingAnswer(val)
       return
     }
     // correct: proceed immediately
@@ -61,12 +59,9 @@ export default function PlayPage() {
   }
 
   function onGameReady() {
-    // Called by game when its auto-solve animation is complete
-    if (awaitingAutoSolve && pendingAnswer !== null) {
-      s.answer(pendingAnswer)
-    }
+    // Called by game when its auto-solve animation is complete (after a wrong attempt)
+    // Do NOT advance to the next challenge on wrong answers; allow the player to try again with clues.
     setAwaitingAutoSolve(false)
-    setPendingAnswer(null)
     setLastMistake(false)
   }
 
