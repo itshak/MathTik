@@ -6,9 +6,12 @@ import { Person } from '@/components/illustrations/Person'
 import { audio } from '@/lib/audio'
 import { DraggableItem, DroppableZone } from './dnd'
 import { useI18n } from '@/lib/i18n'
+import { useGameStore } from '@/lib/store'
 
 export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number; b: number; mistake?: boolean; onReady?: () => void; mistakes?: number }) {
   const t = useI18n()
+  const lang = useGameStore(s => s.profile.language || 'en')
+  const isRTL = lang === 'he'
   const total = a * b
   // Start with apples distributed to groups; pool empty (avoid first-frame flicker)
   const [pool, setPool] = useState<number[]>(() => [])
@@ -142,21 +145,43 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
     }
   }
 
-  // dynamic sizing: slightly smaller to improve fit in viewport
-  const cols = Math.min(10, b)
+  // Responsive sizing
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [containerW, setContainerW] = useState(0)
+  useEffect(() => {
+    if (!containerRef.current) return
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) setContainerW(Math.floor(e.contentRect.width))
+    })
+    ro.observe(containerRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  // Outer grid: number of groups per row
+  const outerCols = useMemo(() => {
+    if (a >= 6) {
+      if (containerW < 420) return Math.min(4, a)
+      if (containerW < 640) return Math.min(3, a)
+    }
+    return Math.min(3, a)
+  }, [a, containerW])
+
+  // Inner grid: apples per row inside a group
+  const innerCols = Math.min(10, b)
+  const gridGap = 12 // gap-3
+  const innerGap = 8 // gap-2
+  const cardW = containerW > 0 ? Math.floor((containerW - gridGap * (outerCols - 1)) / Math.max(outerCols, 1)) : 320
   const tile = useMemo(() => {
-    if (cols <= 3) return 84
-    if (cols <= 5) return 60
-    if (cols <= 8) return 48
-    return 36
-  }, [cols])
-  const appleSize = Math.max(24, Math.round(tile * 0.75))
+    const raw = Math.floor((cardW - innerGap * (innerCols - 1)) / Math.max(innerCols, 1))
+    return Math.max(28, Math.min(96, raw))
+  }, [cardW, innerCols])
+  const appleSize = Math.max(20, Math.round(tile * 0.75))
 
   return (
     <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Pool (placed first to remain visible even on small heights) */}
-        <div className="border rounded-xl p-3">
+        <div className="border border-gray-300 rounded-xl p-3">
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span>🧺</span><span>{t('pool')}</span>
           </div>
@@ -172,11 +197,11 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
                       <>
                         <span className="absolute inset-0 grid place-items-center text-sm sm:text-base lg:text-lg font-black text-white num-stroke">{j < countIdx ? String(j + 1) : (j === total - 1 ? '?' : '')}</span>
                         {j === Math.min(countIdx, total - 1) && (
-                          <span className="absolute -left-6 top-[35%] pointer-events-none text-2xl animate-pointer">👉</span>
+                          <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                         )}
                       </>
                     ) : (mistakes === 1 && j === 0) ? (
-                      <span className="absolute -left-6 top-[35%] pointer-events-none text-2xl animate-pointer">👉</span>
+                      <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                     ) : null
                   )}
                 </div>
@@ -186,13 +211,17 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
         </div>
 
         {/* Groups */}
-        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`}>
+        <div
+          ref={containerRef}
+          className={`grid gap-3 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`}
+          style={{ gridTemplateColumns: `repeat(${outerCols}, minmax(0, 1fr))` }}
+        >
           {groups.map((g, i) => (
-            <div key={i} className="border-2 border-dashed rounded-xl p-2 relative">
+            <div key={i} className="border border-gray-300 rounded-xl p-2 relative">
               <div className="flex items-center gap-1 text-sm text-gray-500">
-                <Person size={Math.round(tile * 0.9)} /> <span className="text-base">×</span> <Apple size={appleSize} />
+                <Person size={Math.round(tile * 0.9)} />
               </div>
-              <DroppableZone id={`group-${i}`} className="mt-2 grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0,1fr))`, minHeight: tile }}>
+              <DroppableZone id={`group-${i}`} className="mt-2 grid gap-2" style={{ gridTemplateColumns: `repeat(${innerCols}, minmax(0,1fr))`, minHeight: tile }}>
                 {g.map((id, j) => (
                   <DraggableItem id={id} key={id}>
                     <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative`} style={{ width: tile, height: tile }}>

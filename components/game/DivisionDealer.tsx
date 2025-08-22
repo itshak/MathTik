@@ -1,14 +1,17 @@
 "use client"
 import { DndContext, DragEndEvent } from '@dnd-kit/core'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Apple } from '@/components/illustrations/Apple'
 import { Person } from '@/components/illustrations/Person'
 import { audio } from '@/lib/audio'
 import { DraggableItem, DroppableZone } from './dnd'
 import { useI18n } from '@/lib/i18n'
+import { useGameStore } from '@/lib/store'
 
 export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number; b: number; mistake?: boolean; onReady?: () => void; mistakes?: number }) {
   const t = useI18n()
+  const lang = useGameStore(s => s.profile.language || 'en')
+  const isRTL = lang === 'he'
   const q = Math.floor(a / b)
   const [pool, setPool] = useState<number[]>(() => Array.from({ length: a }, (_, i) => i))
   const [friends, setFriends] = useState<number[][]>(() => Array.from({ length: b }, () => []))
@@ -136,22 +139,43 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
     }
   }
 
-  // dynamic sizing: based on per-friend capacity q (cap rows to ~10 visually)
-  const cols = Math.min(10, q)
+  // Responsive sizing
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const [containerW, setContainerW] = useState(0)
+  useEffect(() => {
+    if (!containerRef.current) return
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) setContainerW(Math.floor(e.contentRect.width))
+    })
+    ro.observe(containerRef.current)
+    return () => ro.disconnect()
+  }, [])
+
+  // Outer grid columns (number of people per row)
+  const outerCols = useMemo(() => {
+    if (a >= 6) {
+      if (containerW < 420) return Math.min(4, a)
+      if (containerW < 640) return Math.min(3, a)
+    }
+    return Math.min(3, a)
+  }, [a, containerW])
+
+  // Inner per-friend layout and tile size
+  const innerCols = Math.min(10, q)
+  const gridGap = 12 // gap-3
+  const innerGap = 8 // gap-2
+  const cardW = containerW > 0 ? Math.floor((containerW - gridGap * (outerCols - 1)) / Math.max(outerCols, 1)) : 320
   const tile = useMemo(() => {
-    // slightly smaller to ensure entire board fits small viewports
-    if (cols <= 3) return 84
-    if (cols <= 5) return 60
-    if (cols <= 8) return 48
-    return 36
-  }, [cols])
-  const appleSize = Math.max(24, Math.round(tile * 0.75))
+    const raw = Math.floor((cardW - innerGap * (innerCols - 1)) / Math.max(innerCols, 1))
+    return Math.max(28, Math.min(96, raw))
+  }, [cardW, innerCols])
+  const appleSize = Math.max(20, Math.round(tile * 0.75))
 
   return (
     <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Pool (no text) */}
-        <div className="border rounded-xl p-3">
+        <div className="border border-gray-300 rounded-xl p-3">
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span className="text-xl">🗃️</span>
           </div>
@@ -167,9 +191,13 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
         </div>
 
         {/* Friends */}
-        <div className={`grid grid-cols-2 sm:grid-cols-3 gap-3 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`}>
+        <div
+          ref={containerRef}
+          className={`grid gap-3 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`}
+          style={{ gridTemplateColumns: `repeat(${outerCols}, minmax(0, 1fr))` }}
+        >
           {friends.map((f, i) => (
-            <div key={i} className="border-2 border-dashed rounded-xl p-2 relative">
+            <div key={i} className="border border-gray-300 rounded-xl p-2 relative">
               <div className="flex items-center gap-1 text-sm text-gray-500">
                 <Person size={Math.round(tile * 0.9)} />
               </div>
@@ -186,11 +214,11 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
                       )}
                       {/* Moving pointer: outside the apple, pointing to it */}
                       {typeof mistakes === 'number' && mistakes === 2 && i === 0 && j === Math.min(countIdx, q - 1) && (
-                        <span className="absolute -left-6 top-[35%] pointer-events-none text-2xl animate-pointer">👉</span>
+                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                       )}
                       {/* First mistake: static pointer outside first apple of first friend */}
                       {typeof mistakes === 'number' && mistakes === 1 && i === 0 && j === 0 && (
-                        <span className="absolute -left-6 top-[35%] pointer-events-none text-2xl animate-pointer">👉</span>
+                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                       )}
                     </div>
                   </DraggableItem>

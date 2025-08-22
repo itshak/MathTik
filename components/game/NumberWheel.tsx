@@ -10,7 +10,7 @@ export function NumberWheel({ min=0, max=100, value, onPick, disabled, correct, 
   }, [min,max])
 
   return (
-    <div className={clsx('overflow-x-auto card p-3', disabled && 'opacity-60 pointer-events-none')}>
+    <div dir="ltr" className={clsx('overflow-x-auto card p-3', disabled && 'opacity-60 pointer-events-none')}>
       <div className="flex gap-3 w-max">
         {nums.map(n => {
           const isCorrect = typeof correct === 'number' && n === correct

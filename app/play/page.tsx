@@ -86,7 +86,8 @@ export default function PlayPage() {
       <section className="flex-1 overflow-hidden px-4 py-1">
         <div className="card h-full p-3 game-area overflow-hidden flex flex-col items-center">
           <div className="text-center mb-4 mt-2">
-            <div className="text-4xl sm:text-5xl font-black tracking-tight">{ch.a} {ch.op === 'mul' ? '×' : '÷'} {ch.b}</div>
+            {/* Keep numeric equation left-to-right in all languages */}
+            <div dir="ltr" className="text-4xl sm:text-5xl font-black tracking-tight">{ch.a} {ch.op === 'mul' ? '×' : '÷'} {ch.b}</div>
           </div>
           <div className="w-full max-w-4xl mx-auto">
             {Game}
