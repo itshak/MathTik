@@ -12,7 +12,7 @@ export function AnswerTiles({ values, correct, onSelect, disabled, highlightCorr
             onClick={() => onSelect(v)}
             className={clsx(
               "btn btn-secondary text-3xl py-6",
-              highlightCorrect && isCorrect && 'ring-4 ring-good animate-pump'
+              highlightCorrect && isCorrect && 'animate-pump'
             )}
             data-correct={isCorrect ? 'true' : 'false'}
           >

@@ -159,9 +159,6 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
         <div className="border rounded-xl p-3">
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span>🧺</span><span>{t('pool')}</span>
-            {(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) && (
-              <span className="ml-auto text-[11px] text-gray-400">{t('countTogether')} {pool.length}/{total}</span>
-            )}
           </div>
           <DroppableZone id="pool" className={`mt-2 flex flex-wrap gap-2 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: tile }}>
             {pool.map((id, j) => (
@@ -170,16 +167,16 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
                   <Apple size={appleSize} />
                   {typeof mistakes === 'number' && (
                     mistakes >= 3 ? (
-                      <span className="absolute inset-0 grid place-items-center text-xs sm:text-sm font-black text-brand">{j + 1}</span>
+                      <span className="absolute inset-0 grid place-items-center text-sm sm:text-base lg:text-lg font-black text-white num-stroke">{j + 1}</span>
                     ) : mistakes >= 2 ? (
                       <>
-                        <span className="absolute inset-0 grid place-items-center text-xs sm:text-sm font-black text-brand">{j < countIdx ? String(j + 1) : (j === total - 1 ? '?' : '')}</span>
+                        <span className="absolute inset-0 grid place-items-center text-sm sm:text-base lg:text-lg font-black text-white num-stroke">{j < countIdx ? String(j + 1) : (j === total - 1 ? '?' : '')}</span>
                         {j === Math.min(countIdx, total - 1) && (
-                          <span className="absolute inset-0 grid place-items-center pointer-events-none text-2xl">👉</span>
+                          <span className="absolute -left-6 top-[35%] pointer-events-none text-2xl animate-pointer">👉</span>
                         )}
                       </>
                     ) : (mistakes === 1 && j === 0) ? (
-                      <span className="absolute inset-0 grid place-items-center pointer-events-none text-2xl">👉</span>
+                      <span className="absolute -left-6 top-[35%] pointer-events-none text-2xl animate-pointer">👉</span>
                     ) : null
                   )}
                 </div>
@@ -208,7 +205,7 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
                   <div key={k} className="rounded-xl border border-gray-200" style={{ width: tile, height: tile }} />
                 ))}
               </DroppableZone>
-              <div className="text-[10px] mt-1 text-gray-400 font-bold">{g.length}/{b}</div>
+              {/* removed totals to avoid giving away answer */}
             </div>
           ))}
         </div>

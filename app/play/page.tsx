@@ -6,7 +6,6 @@ import { AnswerTiles } from '@/components/game/AnswerTiles'
 import { NumberWheel } from '@/components/game/NumberWheel'
 import { MultiplyGroups } from '@/components/game/MultiplyGroups'
 import { DivisionDealer } from '@/components/game/DivisionDealer'
-import { ArrayBuilder } from '@/components/game/ArrayBuilder'
 import { audio } from '@/lib/audio'
 
 export default function PlayPage() {
@@ -32,9 +31,7 @@ export default function PlayPage() {
     if (ch.game === 'division-dealer') return (
       <DivisionDealer key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} onReady={onGameReady} mistakes={mistakeCount} />
     )
-    if (ch.game === 'array-builder') return (
-      <ArrayBuilder key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} onReady={onGameReady} mistakes={mistakeCount} />
-    )
+    // ArrayBuilder is disabled for now
     return null
   }, [ch, lastMistake, mistakeCount])
 
@@ -101,7 +98,7 @@ export default function PlayPage() {
         {ch.input === 'mc' ? (
           <AnswerTiles values={ch.choices} correct={ch.answer} onSelect={onAnswer} highlightCorrect={mistakeCount >= 3} />
         ) : (
-          <NumberWheel min={0} max={100} onPick={onAnswer} />
+          <NumberWheel min={0} max={100} onPick={onAnswer} correct={ch.answer} highlightCorrect={mistakeCount >= 3} />
         )}
       </section>
     </main>

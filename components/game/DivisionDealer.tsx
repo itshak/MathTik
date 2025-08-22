@@ -154,9 +154,6 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
         <div className="border rounded-xl p-3">
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span className="text-xl">🗃️</span>
-            {(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) && (
-              <span className="ml-auto text-[11px] text-gray-400">{t('countTogether')} {a - pool.length}/{a}</span>
-            )}
           </div>
           <DroppableZone id="pool" className={`mt-2 flex flex-wrap gap-2 ${typeof mistakes === 'number' && mistakes >= 1 ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: tile }}>
             {pool.map(id => (
@@ -183,17 +180,17 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
                       <Apple size={appleSize} />
                       {/* Counting overlays */}
                       {typeof mistakes === 'number' && ((mistakes >= 3) || (mistakes >= 2 && i === 0)) && (
-                        <span className="absolute inset-0 grid place-items-center text-xs sm:text-sm font-black text-brand">
+                        <span className="absolute inset-0 grid place-items-center text-sm sm:text-base lg:text-lg font-black text-white num-stroke">
                           {mistakes >= 3 ? String(j + 1) : (j < countIdx ? String(j + 1) : (j === q - 1 ? '?' : ''))}
                         </span>
                       )}
-                      {/* Moving pointer attached to current apple on second mistake */}
+                      {/* Moving pointer: outside the apple, pointing to it */}
                       {typeof mistakes === 'number' && mistakes === 2 && i === 0 && j === Math.min(countIdx, q - 1) && (
-                        <span className="absolute inset-0 grid place-items-center pointer-events-none text-2xl">👉</span>
+                        <span className="absolute -left-6 top-[35%] pointer-events-none text-2xl animate-pointer">👉</span>
                       )}
-                      {/* First mistake: static pointer on first apple of first friend */}
+                      {/* First mistake: static pointer outside first apple of first friend */}
                       {typeof mistakes === 'number' && mistakes === 1 && i === 0 && j === 0 && (
-                        <span className="absolute inset-0 grid place-items-center pointer-events-none text-2xl">👉</span>
+                        <span className="absolute -left-6 top-[35%] pointer-events-none text-2xl animate-pointer">👉</span>
                       )}
                     </div>
                   </DraggableItem>
@@ -202,7 +199,7 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes }: { a: number
                   <div key={k} className="rounded-xl border border-gray-200" style={{ width: tile, height: tile }} />
                 ))}
               </DroppableZone>
-              <div className="text-[10px] mt-1 text-gray-400 font-bold">{f.length}/{q}</div>
+              {/* removed totals to avoid giving away answer */}
             </div>
           ))}
         </div>
