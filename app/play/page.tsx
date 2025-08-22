@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useGameStore } from '@/lib/store'
 import { AnswerTiles } from '@/components/game/AnswerTiles'
@@ -22,18 +22,22 @@ export default function PlayPage() {
   const [lastMistake, setLastMistake] = useState(false)
   const [mistakeCount, setMistakeCount] = useState(0)
   const [awaitingAutoSolve, setAwaitingAutoSolve] = useState(false)
+  // Measure available height for game content so it never goes under the bottom answers row
+  const cardRef = useRef<HTMLDivElement | null>(null)
+  const eqRef = useRef<HTMLDivElement | null>(null)
+  const [maxGameH, setMaxGameH] = useState(0)
 
   const Game = useMemo(() => {
     if (!ch) return null
     if (ch.game === 'multiply-groups') return (
-      <MultiplyGroups key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} mistakes={mistakeCount} onReady={onGameReady} />
+      <MultiplyGroups key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} mistakes={mistakeCount} onReady={onGameReady} maxH={maxGameH} />
     )
     if (ch.game === 'division-dealer') return (
-      <DivisionDealer key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} onReady={onGameReady} mistakes={mistakeCount} />
+      <DivisionDealer key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} onReady={onGameReady} mistakes={mistakeCount} maxH={maxGameH} />
     )
     // ArrayBuilder is disabled for now
     return null
-  }, [ch, lastMistake, mistakeCount])
+  }, [ch, lastMistake, mistakeCount, maxGameH])
 
   if (!ch) return null
 
@@ -65,6 +69,22 @@ export default function PlayPage() {
   const targetPerLevel = 10
   const progressPct = Math.min(100, Math.round(((s.sessionCorrect % targetPerLevel) / targetPerLevel) * 100))
 
+  // Observe the card height and equation height to compute the space available for the game content
+  useEffect(() => {
+    if (!cardRef.current) return
+    const ro = new ResizeObserver(entries => {
+      for (const e of entries) {
+        const cardH = e.contentRect.height
+        const eqH = eqRef.current ? eqRef.current.offsetHeight : 0
+        // Subtract equation height and small spacing (mb-4 + mt-2 ~ 24px) and padding for safety
+        const available = Math.max(0, Math.floor(cardH - eqH - 28))
+        setMaxGameH(available)
+      }
+    })
+    ro.observe(cardRef.current)
+    return () => ro.disconnect()
+  }, [])
+
   return (
     <main className="game-screen flex flex-col">
       <div className="px-4 pt-4">
@@ -84,12 +104,12 @@ export default function PlayPage() {
       </div>
 
       <section className="flex-1 overflow-hidden px-4 py-1">
-        <div className="card h-full p-3 game-area overflow-hidden flex flex-col items-center">
-          <div className="text-center mb-4 mt-2">
+        <div ref={cardRef} className="card h-full p-3 game-area overflow-hidden flex flex-col items-center">
+          <div ref={eqRef} className="text-center mb-4 mt-2">
             {/* Keep numeric equation left-to-right in all languages */}
             <div dir="ltr" className="text-4xl sm:text-5xl font-black tracking-tight">{ch.a} {ch.op === 'mul' ? '×' : '÷'} {ch.b}</div>
           </div>
-          <div className="w-full max-w-4xl mx-auto">
+          <div className="w-full">
             {Game}
           </div>
         </div>
@@ -97,9 +117,9 @@ export default function PlayPage() {
 
       <section className="px-4 pb-5">
         {ch.input === 'mc' ? (
-          <AnswerTiles values={ch.choices} correct={ch.answer} onSelect={onAnswer} highlightCorrect={mistakeCount >= 3} />
+          <AnswerTiles values={ch.choices} correct={ch.answer} onSelect={onAnswer} disabled={awaitingAutoSolve} highlightCorrect={mistakeCount >= 3} />
         ) : (
-          <NumberWheel min={0} max={100} onPick={onAnswer} correct={ch.answer} highlightCorrect={mistakeCount >= 3} />
+          <NumberWheel min={0} max={100} onPick={onAnswer} disabled={awaitingAutoSolve} correct={ch.answer} highlightCorrect={mistakeCount >= 3} />
         )}
       </section>
     </main>

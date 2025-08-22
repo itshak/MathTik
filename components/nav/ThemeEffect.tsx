@@ -7,7 +7,7 @@ export function ThemeEffect() {
   const lang = useGameStore(s => s.profile.language || 'en')
   useEffect(() => {
     if (typeof document !== 'undefined') {
-      document.documentElement.setAttribute('data-theme', theme || 'default')
+      document.documentElement.setAttribute('data-theme', theme || 'buzz')
     }
   }, [theme])
   useEffect(() => {

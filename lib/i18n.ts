@@ -13,6 +13,8 @@ export type I18nKey =
   | 'noSessionYet'
   | 'language'
   | 'theme'
+  | 'themeBuzz'
+  | 'themeBarbie'
   | 'menu'
   | 'pool'
   | 'dragToPool'
@@ -37,6 +39,8 @@ const D: Record<Lang, Record<I18nKey, string>> = {
     noSessionYet: 'No session yet',
     language: 'Language',
     theme: 'Theme',
+    themeBuzz: 'Buzz',
+    themeBarbie: 'Barbie',
     menu: 'Menu',
     pool: 'Pool',
     dragToPool: 'Drag the apples to the pool',
@@ -50,7 +54,7 @@ const D: Record<Lang, Record<I18nKey, string>> = {
     level: 'Level',
   },
   ru: {
-    appTitle: 'МэтТик',
+    appTitle: 'MathTik',
     subtitle: 'Умножай и дели в веселых мини-играх',
     startPlaying: 'Начать игру',
     continue: 'Продолжить',
@@ -60,6 +64,8 @@ const D: Record<Lang, Record<I18nKey, string>> = {
     noSessionYet: 'Сессий пока нет',
     language: 'Язык',
     theme: 'Тема',
+    themeBuzz: 'Базз',
+    themeBarbie: 'Барби',
     menu: 'Меню',
     pool: 'Корзина',
     dragToPool: 'Перетащи яблоки в корзину',
@@ -73,7 +79,7 @@ const D: Record<Lang, Record<I18nKey, string>> = {
     level: 'Уровень',
   },
   he: {
-    appTitle: 'מתיק',
+    appTitle: 'MathTik',
     subtitle: 'כפל וחילוק במשחקונים מהנים',
     startPlaying: 'התחל משחק',
     continue: 'להמשיך',
@@ -83,6 +89,8 @@ const D: Record<Lang, Record<I18nKey, string>> = {
     noSessionYet: 'אין סשן עדיין',
     language: 'שפה',
     theme: 'ערכת נושא',
+    themeBuzz: 'באז',
+    themeBarbie: 'ברבי',
     menu: 'תפריט',
     pool: 'סל',
     dragToPool: 'גררו את התפוחים לסל',

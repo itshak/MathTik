@@ -9,14 +9,14 @@ const LANGS: { code: 'en'|'ru'|'he'; label: string; flag: string }[] = [
   { code: 'ru', label: 'Русский', flag: '🇷🇺' },
   { code: 'he', label: 'עברית', flag: '🇮🇱' },
 ]
-const THEMES: { id: 'default'|'barbie'; label: string; swatch: string }[] = [
-  { id: 'default', label: 'Default', swatch: '#6c5ce7' },
-  { id: 'barbie', label: 'Barbie', swatch: '#ec4899' },
+const THEMES: { id: 'buzz'|'barbie'; labelKey: 'themeBuzz'|'themeBarbie'; swatch: string }[] = [
+  { id: 'buzz', labelKey: 'themeBuzz', swatch: '#6c5ce7' },
+  { id: 'barbie', labelKey: 'themeBarbie', swatch: '#ec4899' },
 ]
 
 export default function SettingsPage() {
   const lang = useGameStore(s => s.profile.language || 'en')
-  const theme = useGameStore(s => s.profile.theme || 'default')
+  const theme = useGameStore(s => s.profile.theme || 'buzz')
   const setLanguage = useGameStore(s => s.setLanguage)
   const setTheme = useGameStore(s => s.setTheme)
   const t = useI18n()
@@ -42,9 +42,9 @@ export default function SettingsPage() {
       <section className="card p-4 mt-6">
         <h2 className="font-bold mb-2">{t('theme')}</h2>
         <div className="grid grid-cols-2 gap-2">
-          {THEMES.map(t => (
-            <button key={t.id} onClick={() => setTheme(t.id)} className={`btn ${theme===t.id?'bg-brand text-white':'btn-ghost'}`}>
-              <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: t.swatch }} /> {t.label}
+          {THEMES.map(th => (
+            <button key={th.id} onClick={() => setTheme(th.id)} className={`btn ${theme===th.id?'bg-brand text-white':'btn-ghost'}`}>
+              <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: th.swatch }} /> {t(th.labelKey)}
             </button>
           ))}
         </div>

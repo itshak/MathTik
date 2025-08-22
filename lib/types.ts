@@ -43,7 +43,7 @@ export type ProfileState = {
   soundOn: boolean
   unlocked: Record<string, boolean>
   language?: 'en' | 'ru' | 'he'
-  theme?: 'default' | 'barbie'
+  theme?: 'buzz' | 'barbie'
 }
 
 export type GameState = {
@@ -52,7 +52,7 @@ export type GameState = {
   recentMistakes: string[] // queue of mastery keys
   lastOp?: Op
   language?: 'en' | 'ru' | 'he'
-  theme?: 'default' | 'barbie'
+  theme?: 'buzz' | 'barbie'
   sessionStartAt?: number
   sessionAttempts: number
   sessionCorrect: number

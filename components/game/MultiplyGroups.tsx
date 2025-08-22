@@ -8,7 +8,7 @@ import { DraggableItem, DroppableZone } from './dnd'
 import { useI18n } from '@/lib/i18n'
 import { useGameStore } from '@/lib/store'
 
-export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number; b: number; mistake?: boolean; onReady?: () => void; mistakes?: number }) {
+export function MultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: { a: number; b: number; mistake?: boolean; onReady?: () => void; mistakes?: number; maxH?: number }) {
   const t = useI18n()
   const lang = useGameStore(s => s.profile.language || 'en')
   const isRTL = lang === 'he'
@@ -31,6 +31,10 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
   const autoRunId = useRef(0)
   const countTimer = useRef<number | null>(null)
   const countPos = useRef(-1)
+  const readySent = useRef(false)
+
+  // Reset ready gate when mistakes count changes
+  useEffect(() => { readySent.current = false }, [mistakes])
 
   useEffect(() => {
     // Start with apples distributed to groups (a groups, b each); pool is empty
@@ -49,8 +53,8 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
   // Ready when all apples are in the pool (after user or auto-solve finishes)
   useEffect(() => {
     const done = pool.length === total
-    if (done) onReady?.()
-  }, [pool.length, total, onReady])
+    if (done && !readySent.current) { readySent.current = true; onReady?.() }
+  }, [pool.length, total])
 
   // Auto-solve: move all apples from groups into pool (deterministic sequence)
   // Depend only on `mistake` so re-renders from state changes don't cancel the timer mid-run.
@@ -67,7 +71,7 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
       if (thisRun !== autoRunId.current) return
       if (i >= idsQueue.length) {
         setAutoSolving(false)
-        if (!mistakes || mistakes < 2) onReady?.()
+        if (!mistakes || mistakes < 2) { if (!readySent.current) { readySent.current = true; onReady?.() } }
         return
       }
       const id = idsQueue[i++]
@@ -86,7 +90,7 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
     if (countTimer.current) { clearTimeout(countTimer.current); countTimer.current = null }
     countPos.current = -1
     if (autoSolving || !mistakes) { setCountIdx(-1); return }
-    if (mistakes >= 3) { setCountIdx(total - 1); onReady?.(); return }
+    if (mistakes >= 3) { setCountIdx(total - 1); if (!readySent.current) { readySent.current = true; onReady?.() } return }
     if (mistakes >= 2) {
       const tick = () => {
         countPos.current = Math.min(total - 1, countPos.current + 1)
@@ -94,14 +98,14 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
         if (countPos.current < total - 1) {
           countTimer.current = window.setTimeout(tick, 600)
         } else {
-          onReady?.()
+          if (!readySent.current) { readySent.current = true; onReady?.() }
         }
       }
       tick()
       return () => { if (countTimer.current) { clearTimeout(countTimer.current); countTimer.current = null } }
     }
     setCountIdx(-1)
-  }, [mistakes, total, autoSolving, onReady])
+  }, [mistakes, total, autoSolving])
 
   function onDragStart() { audio.drag() }
 
@@ -172,9 +176,43 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
   const innerGap = 8 // gap-2
   const cardW = containerW > 0 ? Math.floor((containerW - gridGap * (outerCols - 1)) / Math.max(outerCols, 1)) : 320
   const tile = useMemo(() => {
-    const raw = Math.floor((cardW - innerGap * (innerCols - 1)) / Math.max(innerCols, 1))
-    return Math.max(28, Math.min(96, raw))
-  }, [cardW, innerCols])
+    // Width-constrained tile size
+    const tileByW = Math.floor((cardW - innerGap * (innerCols - 1)) / Math.max(innerCols, 1))
+    let maxTile = Math.max(24, Math.min(140, tileByW))
+
+    // Height constraint: ensure pool + groups fit within maxH (if provided)
+    if (!maxH || maxH <= 0) return maxTile
+
+    function totalHeightFor(t: number) {
+      // Pool section height (header + spacing + one row of tiles) within p-3 container
+      const poolHeaderH = 16
+      const poolPadding = 24 // top+bottom from p-3
+      const poolSpacing = 8 // mt-2
+      const poolH = poolPadding + poolHeaderH + poolSpacing + t
+
+      // Group card height
+      const headerH = Math.round(t * 0.9)
+      const rowsInCard = Math.ceil(b / innerCols)
+      const appleGridH = rowsInCard * t + Math.max(0, rowsInCard - 1) * innerGap
+      const cardPadding = 24 // p-2 top+bottom plus small margins
+      const cardH = headerH + 8 /* mt-2 */ + appleGridH + cardPadding
+
+      const gridRows = Math.ceil(a / outerCols)
+      const groupsH = gridRows * cardH + Math.max(0, gridRows - 1) * gridGap
+
+      // Gap between pool and groups inside outer grid
+      const outerGapY = gridGap
+      return poolH + outerGapY + groupsH
+    }
+
+    // Binary search for largest tile <= maxTile that fits in maxH
+    let lo = 24, hi = maxTile, best = 24
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2)
+      if (totalHeightFor(mid) <= maxH) { best = mid; lo = mid + 1 } else { hi = mid - 1 }
+    }
+    return best
+  }, [cardW, innerCols, a, b, outerCols, innerGap, gridGap, maxH])
   const appleSize = Math.max(20, Math.round(tile * 0.75))
 
   return (
@@ -185,7 +223,7 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes }: { a: number
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span>🧺</span><span>{t('pool')}</span>
           </div>
-          <DroppableZone id="pool" className={`mt-2 flex flex-wrap gap-2 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: tile }}>
+          <DroppableZone id="pool" className={`mt-2 flex flex-nowrap overflow-x-auto gap-2 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: tile }}>
             {pool.map((id, j) => (
               <DraggableItem id={id} key={id}>
                 <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative`} style={{ width: tile, height: tile }}>

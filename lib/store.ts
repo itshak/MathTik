@@ -24,7 +24,7 @@ const DEFAULT: GameState = {
     soundOn: true,
     unlocked: {},
     language: 'en',
-    theme: 'default',
+    theme: 'buzz',
   },
   mastery: {},
   recentMistakes: [],
@@ -44,7 +44,7 @@ type Store = GameState & {
   startSession: () => void
   endSession: () => void
   setLanguage: (lang: 'en' | 'ru' | 'he') => void
-  setTheme: (theme: 'default' | 'barbie') => void
+  setTheme: (theme: 'buzz' | 'barbie') => void
 }
 
 // Simple SRS intervals (seconds)
