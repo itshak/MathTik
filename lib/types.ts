@@ -7,7 +7,7 @@ export type Challenge = {
   b: number
   answer: number
   choices: number[]
-  game: 'multiply-groups' | 'division-dealer' | 'array-builder'
+  game: 'multiply-groups' | 'division-dealer' | 'array-builder' | 'coins-multiply-groups' | 'coins-division-dealer'
   input: 'mc' | 'wheel'
 }
 

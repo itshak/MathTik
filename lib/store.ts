@@ -73,9 +73,15 @@ function makeDiv(max: number) {
   return { op: 'div' as Op, a, b, answer: q }
 }
 
-function pickGame(op: Op): Challenge['game'] {
-  // Temporarily disable ArrayBuilder until redesign; always use multiply-groups for multiplication
-  return op === 'mul' ? 'multiply-groups' : 'division-dealer'
+function pickGame(op: Op, a: number, b: number): Challenge['game'] {
+  // Use coins when per-person/per-group count > 4
+  if (op === 'mul') {
+    // a groups, b per group; switch to coins when b > 4 or a > 10 (visual density)
+    return (b > 4) ? 'coins-multiply-groups' : 'multiply-groups'
+  }
+  // op === 'div': a items divided by b people; q per person
+  const q = Math.floor(a / b)
+  return (q > 4) ? 'coins-division-dealer' : 'division-dealer'
 }
 
 function buildChallenge(max: number, lastOp?: Op, review?: {op: Op, a: number, b: number}): Challenge {
@@ -94,7 +100,7 @@ function buildChallenge(max: number, lastOp?: Op, review?: {op: Op, a: number, b
     b: use.b,
     answer: use.answer,
     choices: makeChoices(use.answer),
-    game: pickGame(use.op),
+    game: pickGame(use.op, use.a, use.b),
     input,
   }
 }

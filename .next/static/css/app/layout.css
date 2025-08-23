@@ -583,10 +583,6 @@ video {
 .z-50 {
   z-index: 50;
 }
-.mx-auto {
-  margin-left: auto;
-  margin-right: auto;
-}
 .mb-2 {
   margin-bottom: 0.5rem;
 }
@@ -660,9 +656,6 @@ video {
   width: -moz-max-content;
   width: max-content;
 }
-.max-w-4xl {
-  max-width: 56rem;
-}
 .max-w-xl {
   max-width: 36rem;
 }
@@ -733,6 +726,9 @@ video {
 }
 .rounded-lg {
   border-radius: 0.5rem;
+}
+.rounded-md {
+  border-radius: 0.375rem;
 }
 .rounded-xl {
   border-radius: 16px;

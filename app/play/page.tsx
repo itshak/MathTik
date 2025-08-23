@@ -6,6 +6,8 @@ import { AnswerTiles } from '@/components/game/AnswerTiles'
 import { NumberWheel } from '@/components/game/NumberWheel'
 import { MultiplyGroups } from '@/components/game/MultiplyGroups'
 import { DivisionDealer } from '@/components/game/DivisionDealer'
+import { CoinsMultiplyGroups } from '@/components/game/CoinsMultiplyGroups'
+import { CoinsDivisionDealer } from '@/components/game/CoinsDivisionDealer'
 import { audio } from '@/lib/audio'
 
 export default function PlayPage() {
@@ -34,6 +36,12 @@ export default function PlayPage() {
     )
     if (ch.game === 'division-dealer') return (
       <DivisionDealer key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} onReady={onGameReady} mistakes={mistakeCount} maxH={maxGameH} />
+    )
+    if (ch.game === 'coins-multiply-groups') return (
+      <CoinsMultiplyGroups key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} mistakes={mistakeCount} onReady={onGameReady} maxH={maxGameH} />
+    )
+    if (ch.game === 'coins-division-dealer') return (
+      <CoinsDivisionDealer key={ch.id} a={ch.a} b={ch.b} mistake={lastMistake} onReady={onGameReady} mistakes={mistakeCount} maxH={maxGameH} />
     )
     // ArrayBuilder is disabled for now
     return null
