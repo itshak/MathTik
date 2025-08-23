@@ -3,7 +3,7 @@ import { DndContext, DragEndEvent } from '@dnd-kit/core'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Person } from '@/components/illustrations/Person'
 import { Coin } from '@/components/illustrations/Coin'
-import { CoinCountView } from './CoinUtils'
+import { CoinStacks, splitIntoStacks } from './CoinUtils'
 import { audio } from '@/lib/audio'
 import { DraggableItem, DroppableZone } from './dnd'
 import { useI18n } from '@/lib/i18n'
@@ -82,49 +82,74 @@ export function CoinsDivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: 
     return 40
   }, [b])
 
-  const poolTokens = Math.min(pool, 40) // render up to 40 draggable coins; beyond that we still represent count visually
+  const stacks = useMemo(() => splitIntoStacks(pool), [pool])
+  const pointerIdx = (typeof mistakes === 'number' && mistakes === 1) ? 0 : undefined
+  const overlays = useMemo(() => {
+    if (typeof mistakes !== 'number') return [] as (number[] | undefined)[]
+    return friends.map((cnt, idx) => {
+      const s = splitIntoStacks(cnt)
+      if (mistakes >= 3) { let sum = 0; return s.map(v => (sum += v)) }
+      if (mistakes === 2 && idx === 0) { return s.length > 0 ? [s[0]] : undefined }
+      return undefined
+    })
+  }, [mistakes, friends])
+
+  // Compute pool tile dimensions to avoid clipping stacked coins
+  const poolCoinSize = useMemo(() => Math.round(token * 0.8), [token])
+  const poolOverlap = useMemo(() => Math.max(2, Math.round(token * 0.2)), [token])
+  const poolStackHeight = (c: number) => poolCoinSize + poolOverlap * (c - 1)
+  const poolMinH = useMemo(() => stacks.length ? Math.max(...stacks.map(poolStackHeight)) : poolCoinSize, [stacks, poolCoinSize, poolOverlap])
 
   return (
     <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Pool */}
-        <div className="border border-gray-300 rounded-xl p-3">
+        <div className="border border-gray-300 rounded-xl p-2">
           <div className="flex items-center gap-2 text-gray-500 text-xs">
             <span className="text-xl">🗃️</span>
             <span>{t('pool')}</span>
-            <span className="ml-auto text-[11px] text-gray-400">{pool}</span>
+            {/* Removed numeric hint for pool count */}
           </div>
-          <DroppableZone id="pool" className={`mt-2 flex flex-nowrap overflow-x-auto gap-2 ${(typeof mistakes === 'number' && mistakes >= 1) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: token }}>
-            {/* Draggable unit coins */}
-            {Array.from({ length: poolTokens }).map((_, i) => {
-              const id = `p-${i}-${lastId ?? 0}`
+          <DroppableZone id="pool" className={`mt-1 flex flex-nowrap items-center overflow-x-auto gap-2 py-1 ${(typeof mistakes === 'number' && mistakes >= 1) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: poolMinH }}>
+            {stacks.map((c, si) => {
+              const coinSize = poolCoinSize
+              const overlap = poolOverlap
+              const tileH = poolStackHeight(c)
               return (
-                <DraggableItem id={id} key={id}>
-                  <div className={`rounded-md grid place-items-center bg-white shadow-soft ${i===0 && 'animate-pop'}`} style={{ width: token, height: token }}>
-                    <Coin size={Math.round(token * 0.8)} />
+                <div key={`s-${si}-${lastId ?? 0}`} className="relative rounded-md bg-white shadow-soft" style={{ width: token, height: tileH }}>
+                  {/* Render c coins as independent draggables stacked visually */}
+                  <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+                    <div style={{ position: 'relative', width: coinSize, height: tileH }}>
+                      {Array.from({ length: c }).map((_, ci) => {
+                        const id = `p-${si}-${ci}-${lastId ?? 0}`
+                        return (
+                          <div key={id} style={{ position: 'absolute', left: 0, right: 0, bottom: ci * overlap, display: 'grid', placeItems: 'center', zIndex: 10 + ci }}>
+                            <DraggableItem id={id}>
+                              <div className={`grid place-items-center ${ci===c-1 ? 'animate-pop' : ''}`} style={{ width: coinSize, height: coinSize }}>
+                                <Coin size={coinSize} />
+                              </div>
+                            </DraggableItem>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
-                </DraggableItem>
+                </div>
               )
             })}
-            {/* Visual aggregate stacks for counts beyond draggable tokens */}
-            {pool > poolTokens && (
-              <div className="rounded-md bg-white shadow-soft grid place-items-center px-2 text-xs text-gray-600" style={{ height: token }}>
-                +{pool - poolTokens}
-              </div>
-            )}
           </DroppableZone>
         </div>
 
         {/* Friends */}
         <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${outerCols}, minmax(0, 1fr))` }}>
           {friends.map((cnt, i) => (
-            <div key={i} className="border border-gray-300 rounded-xl p-2">
-              <div className="flex items-center gap-1 text-sm text-gray-500">
-                <Person size={Math.round(token * 0.9)} />
-                <span className="ml-auto text-[11px] text-gray-400">{cnt}/{q}</span>
+            <div key={i} className="border border-gray-300 rounded-xl p-1">
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Person size={Math.round(token * 0.8)} />
+                {/* Removed numeric hint for friend progress */}
               </div>
-              <DroppableZone id={`friend-${i}`} className="mt-2 grid place-items-center" style={{ minHeight: token }}>
-                <CoinCountView count={cnt} size={token} />
+              <DroppableZone id={`friend-${i}`} className="mt-1 grid place-items-center py-1">
+                <CoinStacks count={cnt} size={token} overlayNumbers={overlays[i]} pointerIndex={i===0 ? pointerIdx : undefined} rtl={isRTL} />
               </DroppableZone>
             </div>
           ))}

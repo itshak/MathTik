@@ -556,8 +556,14 @@ video {
 .inset-0 {
   inset: 0px;
 }
+.-left-5 {
+  left: -1.25rem;
+}
 .-left-6 {
   left: -1.5rem;
+}
+.-right-5 {
+  right: -1.25rem;
 }
 .-right-6 {
   right: -1.5rem;
@@ -778,6 +784,9 @@ video {
 }
 .bg-white\/80 {
   background-color: rgb(255 255 255 / 0.8);
+}
+.p-1 {
+  padding: 0.25rem;
 }
 .p-2 {
   padding: 0.5rem;
@@ -1155,6 +1164,11 @@ body {
   }
 }
 @media (min-width: 1024px) {
+
+  .lg\:text-base {
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
 
   .lg\:text-lg {
     font-size: 1.125rem;

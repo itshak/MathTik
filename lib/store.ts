@@ -61,14 +61,18 @@ function makeChoices(correct: number): number[] {
 }
 
 function makeMul(max: number) {
-  const a = rand(max) + 1
-  const b = rand(max) + 1
+  // For testing, prefer coin-based problems: ensure per-group count b >= 5
+  const hi = Math.max(5, max)
+  const a = rand(hi) + 1
+  const b = (hi >= 5) ? (rand(hi - 4) + 5) : 5
   const answer = a * b
   return { op: 'mul' as Op, a, b, answer }
 }
 function makeDiv(max: number) {
-  const b = rand(max) + 1
-  const q = rand(max) + 1
+  // For testing, prefer coin-based problems: ensure quotient q >= 5
+  const hi = Math.max(5, max)
+  const b = rand(hi) + 1
+  const q = (hi >= 5) ? (rand(hi - 4) + 5) : 5
   const a = b * q
   return { op: 'div' as Op, a, b, answer: q }
 }

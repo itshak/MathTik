@@ -18,12 +18,12 @@ export function Coin({ size = 28 }: { size?: number }) {
 }
 
 export function CoinStack({ count = 1, size = 40 }: { count?: 1|2|3|4|5; size?: number }) {
-  const coinSize = Math.round(size * 0.7)
+  const coinSize = Math.round(size * 0.8)
   const overlap = Math.round(size * 0.2)
   const items = Array.from({ length: Math.min(5, Math.max(1, count)) })
   const totalH = coinSize + overlap * (items.length - 1)
   return (
-    <div style={{ width: size, height: size, position: 'relative' }}>
+    <div style={{ width: size, height: '100%', position: 'relative' }}>
       <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
         <div style={{ position: 'relative', width: coinSize, height: totalH }}>
           {items.map((_, i) => (
