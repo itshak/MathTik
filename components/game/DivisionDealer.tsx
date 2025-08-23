@@ -1,6 +1,7 @@
 "use client"
 import { DndContext, DragEndEvent } from '@dnd-kit/core'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
 import { Apple } from '@/components/illustrations/Apple'
 import { Person } from '@/components/illustrations/Person'
 import { audio } from '@/lib/audio'
@@ -205,16 +206,23 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: { a: 
     return best
   }, [cardW, innerCols, q, b, outerCols, innerGap, gridGap, maxH])
   const appleSize = Math.max(20, Math.round(tile * 0.75))
+  // Corner icon sizing and padding (RTL-aware)
+  const iconSize = useMemo(() => Math.round(tile * 1.3), [tile])
+  const iconPad = useMemo(() => Math.max(8, Math.round(iconSize * 0.6)), [iconSize])
+  // Pool needs extra room so its icon never overlaps with many tiles
+  const poolIconPad = useMemo(() => Math.max(12, Math.round(iconSize * 1.2)), [iconSize])
+  // Reserve some vertical space for the corner icons
+  const iconTopPad = useMemo(() => Math.max(6, Math.round(iconSize * 0.4)), [iconSize])
+  // Friends: add a bit more side padding to keep apples clear of the person icon and future pointer
+  const groupIconPad = useMemo(() => Math.max(12, Math.round(iconSize * 0.8)), [iconSize])
 
   return (
     <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
-        {/* Pool (no text) */}
-        <div className="border border-gray-300 rounded-xl p-3">
-          <div className="flex items-center gap-2 text-gray-500 text-xs">
-            <span className="text-xl">🗃️</span>
-          </div>
-          <DroppableZone id="pool" className={`mt-2 flex flex-nowrap overflow-x-auto gap-2 ${typeof mistakes === 'number' && mistakes >= 1 ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: tile }}>
+        {/* Pool */}
+        <div className="relative border border-gray-300 rounded-xl p-2" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: poolIconPad, paddingTop: iconTopPad } as CSSProperties}>
+          <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400`} style={{ fontSize: iconSize }}>🗃️</span>
+          <DroppableZone id="pool" className={`flex flex-nowrap items-center overflow-x-auto gap-2 ${typeof mistakes === 'number' && mistakes >= 1 ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: Math.max(tile, iconSize + 8) }}>
             {pool.map(id => (
               <DraggableItem id={id} key={id}>
                 <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''}`} style={{ width: tile, height: tile }}>
@@ -232,11 +240,11 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: { a: 
           style={{ gridTemplateColumns: `repeat(${outerCols}, minmax(0, 1fr))` }}
         >
           {friends.map((f, i) => (
-            <div key={i} className="border border-gray-300 rounded-xl p-2 relative">
-              <div className="flex items-center gap-1 text-sm text-gray-500">
-                <Person size={Math.round(tile * 0.9)} />
-              </div>
-              <DroppableZone id={`friend-${i}`} className="mt-2 flex flex-wrap gap-2" style={{ minHeight: tile }}>
+            <div key={i} className="relative border border-gray-300 rounded-xl p-1" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: groupIconPad, paddingTop: iconTopPad } as CSSProperties}>
+              <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} opacity-80`}>
+                <Person size={Math.round(tile * 1.3)} />
+              </span>
+              <DroppableZone id={`friend-${i}`} className="flex flex-wrap gap-2" style={{ minHeight: Math.max(tile, iconSize + 8) }}>
                 {f.map((id, j) => (
                   <DraggableItem id={id} key={id}>
                     <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative`} style={{ width: tile, height: tile }}>
@@ -249,11 +257,11 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: { a: 
                       )}
                       {/* Moving pointer: outside the apple, pointing to it */}
                       {typeof mistakes === 'number' && mistakes === 2 && i === 0 && j === Math.min(countIdx, q - 1) && (
-                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
+                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-50 ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                       )}
                       {/* First mistake: static pointer outside first apple of first friend */}
                       {typeof mistakes === 'number' && mistakes === 1 && i === 0 && j === 0 && (
-                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
+                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-50 ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                       )}
                     </div>
                   </DraggableItem>
