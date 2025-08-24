@@ -142,7 +142,7 @@ export function CoinsMultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: 
               <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} opacity-80`}>
                 <Person size={Math.round(token * 1.3)} />
               </span>
-              <DroppableZone id={`group-${i}`} className="grid place-items-center py-1" style={{ minHeight: minStackH }}>
+              <DroppableZone id={`group-${i}`} className="flex flex-wrap items-end gap-2 py-1" style={{ minHeight: minStackH }}>
                 {/* Render cnt coins as independent draggables stacked visually */}
                 {splitIntoStacks(cnt).map((c, si) => {
                   const tileH = stackHeight(c)
