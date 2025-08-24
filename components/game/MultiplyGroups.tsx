@@ -232,7 +232,7 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: { a: 
         {/* Pool (placed first to remain visible even on small heights) */}
         <div className="relative border border-gray-300 rounded-xl p-2" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: poolIconPad, paddingTop: iconTopPad } as CSSProperties}>
           <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400 z-0`} style={{ fontSize: iconSize }}>🧺</span>
-          <DroppableZone id="pool" className={`flex flex-nowrap items-center overflow-x-auto gap-2 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: Math.max(tile, iconSize + 8) }}>
+          <DroppableZone id="pool" className={`relative z-20 flex flex-nowrap items-center overflow-x-auto gap-2 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: Math.max(tile, iconSize + 8) }}>
             {pool.map((id, j) => (
               <DraggableItem id={id} key={id}>
                 <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative z-20`} style={{ width: tile, height: tile }}>
@@ -244,11 +244,11 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: { a: 
                       <>
                         <span className="absolute inset-0 grid place-items-center text-sm sm:text-base lg:text-lg font-black text-white num-stroke">{j < countIdx ? String(j + 1) : (j === total - 1 ? '?' : '')}</span>
                         {j === Math.min(countIdx, total - 1) && (
-                          <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-[100] ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
+                          <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-[999] ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                         )}
                       </>
                     ) : (mistakes === 1 && j === 0) ? (
-                      <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-[100] ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
+                      <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-[999] ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                     ) : null
                   )}
                 </div>

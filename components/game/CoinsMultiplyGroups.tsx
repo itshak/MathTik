@@ -22,6 +22,7 @@ export function CoinsMultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: 
   const autoTimer = useRef<number | null>(null)
   const autoRunId = useRef(0)
   const readySent = useRef(false)
+  const stepping = useRef(false)
 
   useEffect(() => { readySent.current = false }, [mistakes])
   useEffect(() => { setPool(0); setGroups(Array.from({ length: a }, () => b)); nextId.current = 0 }, [a, b, total])
@@ -40,18 +41,20 @@ export function CoinsMultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: 
     autoRunId.current += 1
     const thisRun = autoRunId.current
     const step = () => {
-      if (thisRun !== autoRunId.current) return
-      if (i >= seq.length) { if (!readySent.current) { readySent.current = true; onReady?.() } return }
+      if (thisRun !== autoRunId.current) { stepping.current = false; return }
+      if (i >= seq.length) { stepping.current = false; if (!readySent.current) { readySent.current = true; onReady?.() } return }
       const src = seq[i++]
       setGroups(prev => prev.map((g, idx) => idx === src ? Math.max(0, g - 1) : g))
       setPool(p => Math.min(total, p + 1))
       setLastId(nextId.current++)
+      stepping.current = true
       autoTimer.current = window.setTimeout(step, 160)
     }
     // Defer first step to next tick to avoid StrictMode double-effect immediate run
     if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null }
+    stepping.current = false
     autoTimer.current = window.setTimeout(step, 0)
-    return () => { autoRunId.current += 1; if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null } }
+    return () => { autoRunId.current += 1; if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null }; stepping.current = false }
   }, [mistake])
 
   function onDragStart() { audio.drag() }
@@ -126,8 +129,8 @@ export function CoinsMultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: 
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Pool */}
         <div className="relative border border-gray-300 rounded-xl p-2" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: poolIconPad } as CSSProperties}>
-          <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400`} style={{ fontSize: iconSize }}>🗃️</span>
-          <DroppableZone id="pool" className={`flex flex-nowrap items-center overflow-x-auto gap-2 py-1 ${(typeof mistakes === 'number' && mistakes >= 1) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: minStackH }}>
+          <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400 z-0`} style={{ fontSize: iconSize }}>🗃️</span>
+          <DroppableZone id="pool" className={`relative z-20 flex flex-nowrap items-center overflow-x-auto gap-2 py-1 ${(typeof mistakes === 'number' && mistakes >= 1) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: minStackH }}>
             <CoinStacks count={pool} size={token} overlayNumbers={poolOverlays as unknown as number[]} questionIndex={poolQuestionIndex as number} pointerIndex={poolPointerIndex as number} rtl={isRTL} />
           </DroppableZone>
         </div>

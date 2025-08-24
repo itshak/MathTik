@@ -210,7 +210,7 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: { a: 
   const iconSize = useMemo(() => Math.round(tile * 1.3), [tile])
   const iconPad = useMemo(() => Math.max(8, Math.round(iconSize * 0.6)), [iconSize])
   // Pool needs extra room so its icon never overlaps with many tiles
-  const poolIconPad = useMemo(() => Math.max(12, Math.round(iconSize * 1.2)), [iconSize])
+  const poolIconPad = useMemo(() => Math.max(16, Math.round(iconSize * 1.6)), [iconSize])
   // Reserve some vertical space for the corner icons
   const iconTopPad = useMemo(() => Math.max(6, Math.round(iconSize * 0.4)), [iconSize])
   // Friends: add a bit more side padding to keep apples clear of the person icon and future pointer
@@ -221,11 +221,11 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: { a: 
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Pool */}
         <div className="relative border border-gray-300 rounded-xl p-2" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: poolIconPad, paddingTop: iconTopPad } as CSSProperties}>
-          <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400`} style={{ fontSize: iconSize }}>🗃️</span>
-          <DroppableZone id="pool" className={`flex flex-nowrap items-center overflow-x-auto gap-2 ${typeof mistakes === 'number' && mistakes >= 1 ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: Math.max(tile, iconSize + 8) }}>
+          <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400 z-0`} style={{ fontSize: iconSize }}>🗃️</span>
+          <DroppableZone id="pool" className={`relative z-20 flex flex-nowrap items-center overflow-x-auto gap-2 ${typeof mistakes === 'number' && mistakes >= 1 ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: Math.max(tile, iconSize + 8) }}>
             {pool.map(id => (
               <DraggableItem id={id} key={id}>
-                <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''}`} style={{ width: tile, height: tile }}>
+                <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative z-20`} style={{ width: tile, height: tile }}>
                   <Apple size={appleSize} />
                 </div>
               </DraggableItem>
@@ -247,7 +247,7 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: { a: 
               <DroppableZone id={`friend-${i}`} className="flex flex-wrap gap-2" style={{ minHeight: Math.max(tile, iconSize + 8) }}>
                 {f.map((id, j) => (
                   <DraggableItem id={id} key={id}>
-                    <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative`} style={{ width: tile, height: tile }}>
+                    <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative z-20`} style={{ width: tile, height: tile }}>
                       <Apple size={appleSize} />
                       {/* Counting overlays */}
                       {typeof mistakes === 'number' && ((mistakes >= 3) || (mistakes >= 2 && i === 0)) && (
@@ -257,11 +257,11 @@ export function DivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: { a: 
                       )}
                       {/* Moving pointer: outside the apple, pointing to it */}
                       {typeof mistakes === 'number' && mistakes === 2 && i === 0 && j === Math.min(countIdx, q - 1) && (
-                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-50 ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
+                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-[999] ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                       )}
                       {/* First mistake: static pointer outside first apple of first friend */}
                       {typeof mistakes === 'number' && mistakes === 1 && i === 0 && j === 0 && (
-                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-50 ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
+                        <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-[999] ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                       )}
                     </div>
                   </DraggableItem>

@@ -55,7 +55,7 @@ export function CoinStacks(
             <span className="absolute inset-0 grid place-items-center text-xs sm:text-sm lg:text-base font-black text-white num-stroke">?</span>
           )}
           {typeof pointerIndex === 'number' && pointerIndex === i && (
-            <span className={`absolute ${rtl ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-50 ${rtl ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{rtl ? '👈' : '👉'}</span>
+            <span className={`absolute ${rtl ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-[999] ${rtl ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{rtl ? '👈' : '👉'}</span>
           )}
         </div>
       ))}

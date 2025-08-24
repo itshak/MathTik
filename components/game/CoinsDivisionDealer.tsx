@@ -22,6 +22,7 @@ export function CoinsDivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: 
   const autoTimer = useRef<number | null>(null)
   const autoRunId = useRef(0)
   const readySent = useRef(false)
+  const stepping = useRef(false)
 
   useEffect(() => { readySent.current = false }, [mistakes])
   useEffect(() => { setPool(a); setFriends(Array.from({ length: b }, () => 0)); nextId.current = 0 }, [a, b])
@@ -40,19 +41,21 @@ export function CoinsDivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: 
     autoRunId.current += 1
     const thisRun = autoRunId.current
     const step = () => {
-      if (thisRun !== autoRunId.current) return
-      if (i >= seq.length) { if (!readySent.current) { readySent.current = true; onReady?.() } return }
-      if (pool <= 0) { if (!readySent.current) { readySent.current = true; onReady?.() } return }
+      if (thisRun !== autoRunId.current) { stepping.current = false; return }
+      if (i >= seq.length) { stepping.current = false; if (!readySent.current) { readySent.current = true; onReady?.() } return }
+      if (pool <= 0) { stepping.current = false; if (!readySent.current) { readySent.current = true; onReady?.() } return }
       const tgt = seq[i++]
       setPool(p => Math.max(0, p - 1))
       setFriends(prev => prev.map((f, idx) => idx === tgt ? Math.min(q, f + 1) : f))
       setLastId(nextId.current++)
+      stepping.current = true
       autoTimer.current = window.setTimeout(step, 160)
     }
     // Defer first step to avoid StrictMode double-invocation issues
     if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null }
+    stepping.current = false
     autoTimer.current = window.setTimeout(step, 0)
-    return () => { autoRunId.current += 1; if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null } }
+    return () => { autoRunId.current += 1; if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null }; stepping.current = false }
   }, [mistake])
 
   function onDragStart() { audio.drag() }
@@ -139,8 +142,8 @@ export function CoinsDivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: 
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Pool */}
         <div className="relative border border-gray-300 rounded-xl p-2" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: poolIconPad } as CSSProperties}>
-          <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400`} style={{ fontSize: iconSize }}>🗃️</span>
-          <DroppableZone id="pool" className={`flex flex-nowrap items-center overflow-x-auto gap-2 py-1 ${(typeof mistakes === 'number' && mistakes >= 1) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: poolMinH }}>
+          <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400 z-0`} style={{ fontSize: iconSize }}>🗃️</span>
+          <DroppableZone id="pool" className={`relative z-20 flex flex-nowrap items-center overflow-x-auto gap-2 py-1 ${(typeof mistakes === 'number' && mistakes >= 1) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: poolMinH }}>
             {stacks.map((c, si) => {
               const coinSize = poolCoinSize
               const overlap = poolOverlap

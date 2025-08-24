@@ -41,6 +41,8 @@ type Store = GameState & {
   startedAt?: number
   levelUpPending?: number // shows overlay when set to the reached level
   badgeFlash?: boolean
+  reviewMode?: boolean
+  championPending?: boolean
   // actions
   nextChallenge: () => void
   answer: (value: number) => void
@@ -51,6 +53,7 @@ type Store = GameState & {
   setTheme: (theme: 'buzz' | 'barbie') => void
   dismissLevelUp: () => void
   flashBadge: () => void
+  dismissChampion: () => void
 }
 
 // Simple SRS intervals (seconds)
@@ -81,14 +84,12 @@ const PRIOR_RATIOS: Record<number, number> = {
 }
 
 function pickGame(op: Op, a: number, b: number): Challenge['game'] {
-  // Use coins when per-person/per-group count > 4
+  // Rule: use coins when multiplication product > 12; for division, when dividend (a) > 12. Otherwise apples.
   if (op === 'mul') {
-    // a groups, b per group; switch to coins when b > 4 or a > 10 (visual density)
-    return (b > 4) ? 'coins-multiply-groups' : 'multiply-groups'
+    return (a * b > 12) ? 'coins-multiply-groups' : 'multiply-groups'
   }
-  // op === 'div': a items divided by b people; q per person
-  const q = Math.floor(a / b)
-  return (q > 4) ? 'coins-division-dealer' : 'division-dealer'
+  // op === 'div'
+  return (a > 12) ? 'coins-division-dealer' : 'division-dealer'
 }
 
 function buildChallenge(level: number): Challenge {
@@ -161,14 +162,23 @@ export const useGameStore = create<Store>()(persist((set, get) => ({
       const target = 10
       profile.levelXP = (profile.levelXP ?? 0) + 1
       if (profile.levelXP >= target) {
-        const nextLevel = clamp(profile.level + 1, 1, 10)
-        profile.level = nextLevel
-        profile.maxFactor = nextLevel
-        profile.levelXP = 0
-        // trigger overlay and badge flash
-        set({ levelUpPending: nextLevel, badgeFlash: true })
-        // auto-clear the badge flash after a short delay
-        setTimeout(() => set({ badgeFlash: false }), 1400)
+        if (profile.level >= 10) {
+          // Enter review mode at cap and show champion overlay
+          profile.level = 10
+          profile.maxFactor = 10
+          profile.levelXP = 0
+          set({ reviewMode: true, championPending: true, badgeFlash: true })
+          setTimeout(() => set({ badgeFlash: false }), 1400)
+        } else {
+          const nextLevel = clamp(profile.level + 1, 1, 10)
+          profile.level = nextLevel
+          profile.maxFactor = nextLevel
+          profile.levelXP = 0
+          // trigger overlay and badge flash
+          set({ levelUpPending: nextLevel, badgeFlash: true })
+          // auto-clear the badge flash after a short delay
+          setTimeout(() => set({ badgeFlash: false }), 1400)
+        }
       }
       // unlock rewards
       for (const r of REWARDS) {
@@ -192,6 +202,7 @@ export const useGameStore = create<Store>()(persist((set, get) => ({
   },
   toggleSound: () => set(s => ({ profile: { ...s.profile, soundOn: !s.profile.soundOn } })),
   dismissLevelUp: () => set({ levelUpPending: undefined }),
+  dismissChampion: () => set({ championPending: undefined }),
   flashBadge: () => {
     set({ badgeFlash: true })
     setTimeout(() => set({ badgeFlash: false }), 1200)

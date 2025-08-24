@@ -10,6 +10,7 @@ import { CoinsMultiplyGroups } from '@/components/game/CoinsMultiplyGroups'
 import { CoinsDivisionDealer } from '@/components/game/CoinsDivisionDealer'
 import { audio } from '@/lib/audio'
 import { LevelUpOverlay } from '@/components/game/LevelUpOverlay'
+import { ChampionOverlay } from '@/components/game/ChampionOverlay'
 
 export default function PlayPage() {
   const s = useGameStore()
@@ -135,6 +136,9 @@ export default function PlayPage() {
     </main>
     {s.levelUpPending ? (
       <LevelUpOverlay level={s.levelUpPending!} onClose={() => s.dismissLevelUp()} />
+    ) : null}
+    {s.championPending ? (
+      <ChampionOverlay onClose={() => s.dismissChampion()} />
     ) : null}
     </>
   )
