@@ -120,9 +120,12 @@ export function CoinsMultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: 
   const minStackH = useMemo(() => stackHeight(5), [coinSize, overlap])
   // Corner icon sizing and padding to avoid overlap
   const iconSize = useMemo(() => Math.round(token * 1.3), [token])
-  const iconPad = useMemo(() => Math.max(8, Math.round(iconSize * 0.6)), [iconSize])
+  const iconTopPad = useMemo(() => Math.max(6, Math.round(iconSize * 0.4)), [iconSize])
+  const groupIconPad = useMemo(() => Math.max(24, Math.round(iconSize * 1.6)), [iconSize])
   // Pool needs extra room so its icon never overlaps with many stacks
   const poolIconPad = useMemo(() => Math.max(12, Math.round(iconSize * 1.2)), [iconSize])
+  // Add side padding inside the pool droppable so the finger (👉/👈) isn't clipped by overflow
+  const poolFingerPad = useMemo(() => Math.max(12, Math.round(iconSize * 0.7)), [iconSize])
 
   return (
     <DndContext onDragStart={onDragStart} onDragEnd={onDragEnd}>
@@ -130,7 +133,7 @@ export function CoinsMultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: 
         {/* Pool */}
         <div className="relative border border-gray-300 rounded-xl p-2" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: poolIconPad } as CSSProperties}>
           <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400 z-0`} style={{ fontSize: iconSize }}>🗃️</span>
-          <DroppableZone id="pool" className={`relative z-20 flex flex-nowrap items-center overflow-x-auto gap-2 py-1 ${(typeof mistakes === 'number' && mistakes >= 1) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: minStackH }}>
+          <DroppableZone id="pool" className={`relative z-20 flex flex-nowrap items-center overflow-x-auto gap-2 py-1 ${(typeof mistakes === 'number' && mistakes >= 1) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: minStackH, [isRTL ? 'paddingRight' : 'paddingLeft']: poolFingerPad } as CSSProperties}>
             <CoinStacks count={pool} size={token} overlayNumbers={poolOverlays as unknown as number[]} questionIndex={poolQuestionIndex as number} pointerIndex={poolPointerIndex as number} rtl={isRTL} />
           </DroppableZone>
         </div>
@@ -138,11 +141,11 @@ export function CoinsMultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: 
         {/* Groups */}
         <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(${outerCols}, minmax(0, 1fr))` }}>
           {groups.map((cnt, i) => (
-            <div key={i} className="relative border border-gray-300 rounded-xl p-1" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: iconPad } as CSSProperties}>
-              <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} opacity-80`}>
+            <div key={i} className="relative border border-gray-300 rounded-xl p-1" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: groupIconPad, paddingTop: iconTopPad } as CSSProperties}>
+              <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} opacity-80 z-0`}>
                 <Person size={Math.round(token * 1.3)} />
               </span>
-              <DroppableZone id={`group-${i}`} className="flex flex-wrap items-end gap-2 py-1" style={{ minHeight: minStackH }}>
+              <DroppableZone id={`group-${i}`} className="relative z-20 flex flex-wrap items-center gap-2 py-1" style={{ minHeight: minStackH }}>
                 {/* Render cnt coins as independent draggables stacked visually */}
                 {splitIntoStacks(cnt).map((c, si) => {
                   const tileH = stackHeight(c)

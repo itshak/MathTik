@@ -84,12 +84,12 @@ const PRIOR_RATIOS: Record<number, number> = {
 }
 
 function pickGame(op: Op, a: number, b: number): Challenge['game'] {
-  // Rule: use coins when multiplication product > 12; for division, when dividend (a) > 12. Otherwise apples.
+  // Rule: use coins when multiplication product > 10; for division, when dividend (a) > 10. Otherwise apples.
   if (op === 'mul') {
-    return (a * b > 12) ? 'coins-multiply-groups' : 'multiply-groups'
+    return (a * b > 10) ? 'coins-multiply-groups' : 'multiply-groups'
   }
   // op === 'div'
-  return (a > 12) ? 'coins-division-dealer' : 'division-dealer'
+  return (a > 10) ? 'coins-division-dealer' : 'division-dealer'
 }
 
 function buildChallenge(level: number): Challenge {
