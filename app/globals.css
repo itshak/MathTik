@@ -78,6 +78,24 @@ body {
 }
 .animate-pop { animation: pop 260ms ease-out; }
 
+/* Level-up: badge pop and salute wobble */
+@keyframes badgePop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-badge-pop { animation: badgePop 420ms cubic-bezier(.2, .8, .2, 1) both; }
+
+@keyframes salute {
+  0% { transform: rotate(0deg) translateY(0); opacity: 0; }
+  20% { opacity: 1; }
+  40% { transform: rotate(-8deg) translateY(-2px); }
+  60% { transform: rotate(6deg) translateY(0); }
+  80% { transform: rotate(-3deg) translateY(-1px); }
+  100% { transform: rotate(0deg) translateY(0); }
+}
+.animate-salute { animation: salute 900ms ease-out both; }
+
 /* Outline for numbers shown inside apples during counting clues */
 .num-stroke {
   /* tighter outline for nicer look inside apples */

@@ -9,6 +9,7 @@ import { DivisionDealer } from '@/components/game/DivisionDealer'
 import { CoinsMultiplyGroups } from '@/components/game/CoinsMultiplyGroups'
 import { CoinsDivisionDealer } from '@/components/game/CoinsDivisionDealer'
 import { audio } from '@/lib/audio'
+import { LevelUpOverlay } from '@/components/game/LevelUpOverlay'
 
 export default function PlayPage() {
   const s = useGameStore()
@@ -75,7 +76,7 @@ export default function PlayPage() {
   }
 
   const targetPerLevel = 10
-  const progressPct = Math.min(100, Math.round(((s.sessionCorrect % targetPerLevel) / targetPerLevel) * 100))
+  const progressPct = Math.min(100, Math.round((((s.profile.levelXP ?? 0)) / targetPerLevel) * 100))
 
   // Observe the card height and equation height to compute the space available for the game content
   useEffect(() => {
@@ -94,6 +95,7 @@ export default function PlayPage() {
   }, [])
 
   return (
+    <>
     <main className="game-screen flex flex-col">
       <div className="px-4 pt-4">
         <header className="flex items-center justify-between">
@@ -101,7 +103,7 @@ export default function PlayPage() {
           <Link href="/menu" className="text-xl px-3 py-1 rounded-lg border bg-white shadow-soft active:scale-95 select-none">☰</Link>
           {/* Top-right: Level + stats */}
           <div className="flex items-center gap-2">
-            <div className="text-xs bg-white px-2 py-1 rounded-lg border flex items-center gap-1">🏅 <span className="font-bold">{s.profile.level}</span></div>
+            <div className={`text-xs bg-white px-2 py-1 rounded-lg border flex items-center gap-1 ${s.badgeFlash ? 'animate-badge-pop' : ''}`}>🏅 <span className="font-bold">{s.profile.level}</span></div>
             <span className="text-xs bg-white px-2 py-1 rounded-lg border">⭐ {s.profile.points}</span>
             <button onClick={() => s.toggleSound()} className={`text-xs px-2 py-1 rounded-lg border ${s.profile.soundOn ? 'bg-green-50' : 'bg-red-50'}`}>{s.profile.soundOn ? '🔊' : '🔇'}</button>
           </div>
@@ -131,5 +133,9 @@ export default function PlayPage() {
         )}
       </section>
     </main>
+    {s.levelUpPending ? (
+      <LevelUpOverlay level={s.levelUpPending!} onClose={() => s.dismissLevelUp()} />
+    ) : null}
+    </>
   )
 }

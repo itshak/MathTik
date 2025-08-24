@@ -48,7 +48,9 @@ export function CoinsMultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: 
       setLastId(nextId.current++)
       autoTimer.current = window.setTimeout(step, 160)
     }
-    step()
+    // Defer first step to next tick to avoid StrictMode double-effect immediate run
+    if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null }
+    autoTimer.current = window.setTimeout(step, 0)
     return () => { autoRunId.current += 1; if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null } }
   }, [mistake])
 

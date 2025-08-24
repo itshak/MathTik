@@ -38,6 +38,7 @@ export type ProfileState = {
   bestStreak: number
   level: number // 1..10
   maxFactor: number // 2..10
+  levelXP?: number // progress within current level (0..target)
   totalCorrect: number
   totalAttempts: number
   soundOn: boolean

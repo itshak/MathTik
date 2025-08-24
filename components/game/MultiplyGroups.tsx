@@ -219,7 +219,8 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: { a: 
   const iconSize = useMemo(() => Math.round(tile * 1.3), [tile])
   const iconPad = useMemo(() => Math.max(8, Math.round(iconSize * 0.6)), [iconSize])
   // Pool needs extra room so its icon never overlaps with many tiles
-  const poolIconPad = useMemo(() => Math.max(12, Math.round(iconSize * 1.2)), [iconSize])
+  // Increase side padding so apples stay clear of the basket and leave room for the pointer
+  const poolIconPad = useMemo(() => Math.max(16, Math.round(iconSize * 1.6)), [iconSize])
   // Reserve some vertical space for the corner icons
   const iconTopPad = useMemo(() => Math.max(6, Math.round(iconSize * 0.4)), [iconSize])
   // Groups: add a bit more side padding to keep apples clear of the person icon and future pointer
@@ -230,11 +231,11 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: { a: 
       <div className={`grid grid-cols-1 gap-3 ${mistake ? 'ring-2 ring-red-300 ring-offset-2' : ''}`}>
         {/* Pool (placed first to remain visible even on small heights) */}
         <div className="relative border border-gray-300 rounded-xl p-2" style={{ [isRTL ? 'paddingRight' : 'paddingLeft']: poolIconPad, paddingTop: iconTopPad } as CSSProperties}>
-          <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400`} style={{ fontSize: iconSize }}>🧺</span>
+          <span className={`pointer-events-none absolute top-1 ${isRTL ? 'right-1' : 'left-1'} text-gray-400 z-0`} style={{ fontSize: iconSize }}>🧺</span>
           <DroppableZone id="pool" className={`flex flex-nowrap items-center overflow-x-auto gap-2 ${(autoSolving || (typeof mistakes === 'number' && mistakes >= 1)) ? 'pointer-events-none opacity-95' : ''}`} style={{ minHeight: Math.max(tile, iconSize + 8) }}>
             {pool.map((id, j) => (
               <DraggableItem id={id} key={id}>
-                <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative`} style={{ width: tile, height: tile }}>
+                <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative z-20`} style={{ width: tile, height: tile }}>
                   <Apple size={appleSize} />
                   {typeof mistakes === 'number' && (
                     mistakes >= 3 ? (
@@ -243,11 +244,11 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: { a: 
                       <>
                         <span className="absolute inset-0 grid place-items-center text-sm sm:text-base lg:text-lg font-black text-white num-stroke">{j < countIdx ? String(j + 1) : (j === total - 1 ? '?' : '')}</span>
                         {j === Math.min(countIdx, total - 1) && (
-                          <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-50 ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
+                          <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-[100] ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                         )}
                       </>
                     ) : (mistakes === 1 && j === 0) ? (
-                      <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-50 ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
+                      <span className={`absolute ${isRTL ? '-right-6' : '-left-6'} top-[35%] pointer-events-none text-2xl z-[100] ${isRTL ? 'animate-pointer-rtl' : 'animate-pointer'}`}>{isRTL ? '👈' : '👉'}</span>
                     ) : null
                   )}
                 </div>
@@ -270,7 +271,7 @@ export function MultiplyGroups({ a, b, mistake, onReady, mistakes, maxH }: { a: 
               <DroppableZone id={`group-${i}`} className="flex flex-wrap gap-2" style={{ minHeight: Math.max(tile, iconSize + 8) }}>
                 {g.map((id, j) => (
                   <DraggableItem id={id} key={id}>
-                    <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative`} style={{ width: tile, height: tile }}>
+                    <div className={`rounded-xl grid place-items-center bg-white shadow-soft ${lastAdded===id?'animate-pop':''} relative z-20`} style={{ width: tile, height: tile }}>
                       <Apple size={appleSize} />
                     </div>
                   </DraggableItem>

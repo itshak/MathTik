@@ -49,7 +49,9 @@ export function CoinsDivisionDealer({ a, b, mistake, onReady, mistakes, maxH }: 
       setLastId(nextId.current++)
       autoTimer.current = window.setTimeout(step, 160)
     }
-    step()
+    // Defer first step to avoid StrictMode double-invocation issues
+    if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null }
+    autoTimer.current = window.setTimeout(step, 0)
     return () => { autoRunId.current += 1; if (autoTimer.current) { clearTimeout(autoTimer.current); autoTimer.current = null } }
   }, [mistake])
 

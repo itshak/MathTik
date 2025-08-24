@@ -3,6 +3,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { Attempt, Challenge, GameState, Mastery, Op } from './types'
 import { choice, clamp, keyFor, nowSec, rand, shuffle } from './utils'
+import { pickFromLevel } from './levels'
 
 // Rewards catalog (ids used for future profile sync)
 export const REWARDS = [
@@ -19,6 +20,7 @@ const DEFAULT: GameState = {
     bestStreak: 0,
     level: 1,
     maxFactor: 2,
+    levelXP: 0,
     totalCorrect: 0,
     totalAttempts: 0,
     soundOn: true,
@@ -37,6 +39,8 @@ const DEFAULT: GameState = {
 type Store = GameState & {
   current?: Challenge
   startedAt?: number
+  levelUpPending?: number // shows overlay when set to the reached level
+  badgeFlash?: boolean
   // actions
   nextChallenge: () => void
   answer: (value: number) => void
@@ -45,6 +49,8 @@ type Store = GameState & {
   endSession: () => void
   setLanguage: (lang: 'en' | 'ru' | 'he') => void
   setTheme: (theme: 'buzz' | 'barbie') => void
+  dismissLevelUp: () => void
+  flashBadge: () => void
 }
 
 // Simple SRS intervals (seconds)
@@ -60,21 +66,18 @@ function makeChoices(correct: number): number[] {
   return shuffle([...set])
 }
 
-function makeMul(max: number) {
-  // For testing, prefer coin-based problems: ensure per-group count b >= 5
-  const hi = Math.max(5, max)
-  const a = rand(hi) + 1
-  const b = (hi >= 5) ? (rand(hi - 4) + 5) : 5
-  const answer = a * b
-  return { op: 'mul' as Op, a, b, answer }
-}
-function makeDiv(max: number) {
-  // For testing, prefer coin-based problems: ensure quotient q >= 5
-  const hi = Math.max(5, max)
-  const b = rand(hi) + 1
-  const q = (hi >= 5) ? (rand(hi - 4) + 5) : 5
-  const a = b * q
-  return { op: 'div' as Op, a, b, answer: q }
+// Level-based selection ratios for prior review (approximation of the plan)
+const PRIOR_RATIOS: Record<number, number> = {
+  1: 0,
+  2: 0.2,
+  3: 0.1,
+  4: 0.2,
+  5: 0.2,
+  6: 0.2,
+  7: 0.25,
+  8: 0.3,
+  9: 0.3,
+  10: 0.4,
 }
 
 function pickGame(op: Op, a: number, b: number): Challenge['game'] {
@@ -88,23 +91,19 @@ function pickGame(op: Op, a: number, b: number): Challenge['game'] {
   return (q > 4) ? 'coins-division-dealer' : 'division-dealer'
 }
 
-function buildChallenge(max: number, lastOp?: Op, review?: {op: Op, a: number, b: number}): Challenge {
-  // compute a seed problem with answer included
-  const seed = review
-    ? { op: review.op, a: review.a, b: review.b, answer: review.op === 'mul' ? review.a * review.b : Math.floor(review.a / review.b) }
-    : (Math.random() < 0.5 ? makeMul(max) : makeDiv(max))
-  // avoid repeating same op repeatedly when not reviewing
-  const use = (!review && lastOp && Math.random() < 0.5) ? (lastOp === 'mul' ? makeDiv(max) : makeMul(max)) : seed
-  const id = `${use.op}:${use.a}:${use.b}:${Date.now()}`
+function buildChallenge(level: number): Challenge {
+  const ratio = PRIOR_RATIOS[level] ?? 0.2
+  const f = pickFromLevel(level, ratio)
+  const id = `${f.id}:${Date.now()}`
   const input = Math.random() < 0.75 ? 'mc' : 'wheel'
   return {
     id,
-    op: use.op,
-    a: use.a,
-    b: use.b,
-    answer: use.answer,
-    choices: makeChoices(use.answer),
-    game: pickGame(use.op, use.a, use.b),
+    op: f.op,
+    a: f.a,
+    b: f.b,
+    answer: f.answer,
+    choices: makeChoices(f.answer),
+    game: pickGame(f.op, f.a, f.b),
     input,
   }
 }
@@ -134,25 +133,7 @@ export const useGameStore = create<Store>()(persist((set, get) => ({
   setTheme: (theme) => set(s => ({ profile: { ...s.profile, theme } })),
   nextChallenge: () => {
     const s = get()
-    const max = clamp(s.profile.maxFactor, 2, 10)
-    // SRS first: find any due mastery or recent mistake
-    let review: {op: Op, a: number, b: number} | undefined
-    if (s.recentMistakes.length) {
-      const mk = s.recentMistakes.shift()!
-      const [kind, pair] = mk.split(':')
-      const [a,b] = pair.includes('x') ? pair.split('x').map(Number) : pair.split('/').map(Number)
-      const op = kind === 'm' ? 'mul' : 'div'
-      review = { op: op as Op, a, b }
-    } else {
-      const due = Object.values(s.mastery).find(m => m.dueAt <= nowSec())
-      if (due) {
-        const [kind, pair] = due.key.split(':')
-        const [a,b] = pair.includes('x') ? pair.split('x').map(Number) : pair.split('/').map(Number)
-        const op = kind === 'm' ? 'mul' : 'div'
-        review = { op: op as Op, a, b }
-      }
-    }
-    const ch = buildChallenge(max, s.lastOp, review)
+    const ch = buildChallenge(s.profile.level)
     set({ current: ch, startedAt: Date.now(), lastOp: ch.op })
   },
   answer: (value: number) => {
@@ -176,10 +157,18 @@ export const useGameStore = create<Store>()(persist((set, get) => ({
       profile.streak += 1
       profile.bestStreak = Math.max(profile.bestStreak, profile.streak)
       profile.points += pointsBase + streakBonus
-      // level up periodically
-      if (profile.streak % 4 === 0) {
-        profile.maxFactor = clamp(profile.maxFactor + 1, 2, 10)
-        profile.level = Math.max(profile.level, profile.maxFactor)
+      // Level progress: 10 correct answers to complete a level
+      const target = 10
+      profile.levelXP = (profile.levelXP ?? 0) + 1
+      if (profile.levelXP >= target) {
+        const nextLevel = clamp(profile.level + 1, 1, 10)
+        profile.level = nextLevel
+        profile.maxFactor = nextLevel
+        profile.levelXP = 0
+        // trigger overlay and badge flash
+        set({ levelUpPending: nextLevel, badgeFlash: true })
+        // auto-clear the badge flash after a short delay
+        setTimeout(() => set({ badgeFlash: false }), 1400)
       }
       // unlock rewards
       for (const r of REWARDS) {
@@ -187,8 +176,7 @@ export const useGameStore = create<Store>()(persist((set, get) => ({
       }
     } else {
       profile.streak = 0
-      profile.maxFactor = clamp(profile.maxFactor - 1, 2, 10)
-      profile.level = Math.max(1, profile.maxFactor)
+      // no level down; gentle progression
       const mkey = ch.op === 'mul' ? `m:${ch.a}x${ch.b}` : `d:${ch.a}/${ch.b}`
       const q = s.recentMistakes.slice()
       if (!q.includes(mkey)) q.push(mkey)
@@ -203,4 +191,9 @@ export const useGameStore = create<Store>()(persist((set, get) => ({
     get().nextChallenge()
   },
   toggleSound: () => set(s => ({ profile: { ...s.profile, soundOn: !s.profile.soundOn } })),
+  dismissLevelUp: () => set({ levelUpPending: undefined }),
+  flashBadge: () => {
+    set({ badgeFlash: true })
+    setTimeout(() => set({ badgeFlash: false }), 1200)
+  },
 }), { name: 'mg2_state' }))
